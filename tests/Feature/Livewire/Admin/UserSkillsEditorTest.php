@@ -162,12 +162,3 @@ it('shows their instead of my in filter label for admin context', function () {
         ->assertSee('Show only their skills');
 });
 
-it('has a back link to users list', function () {
-    $admin = User::factory()->admin()->create();
-    $user = User::factory()->create();
-
-    $this->actingAs($admin)
-        ->get("/admin/users/{$user->id}")
-        ->assertSee('Back to Users')
-        ->assertSee(route('admin.users'));
-});

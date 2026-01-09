@@ -223,4 +223,87 @@ Recording what *didn't* work is as valuable as recording what did. The "show pen
 
 ---
 
+## 2026-01-09 - Admin User Skills Management
+
+### What We Built
+
+Admin user skills management at `/admin/users`:
+- Table listing all users with name (as link), email, skills count, last updated
+- Click user name to go to `/admin/users/{user}` to manage their skills
+- Reuses the existing `SkillsEditor` component (consistent UX across the app)
+
+New/modified files:
+- `app/Livewire/Admin/UserSkillsManager.php` - list of users (simplified, no modal)
+- `app/Livewire/Admin/UserSkillsEditor.php` - thin wrapper, just heading + SkillsEditor
+- `app/Livewire/SkillsEditor.php` - now accepts optional `userId` parameter
+- `resources/views/livewire/admin/user-skills-manager.blade.php`
+- `resources/views/livewire/admin/user-skills-editor.blade.php`
+- `tests/Feature/Livewire/Admin/UserSkillsManagerTest.php` - 11 tests
+- `tests/Feature/Livewire/Admin/UserSkillsEditorTest.php` - 14 tests
+
+### UX Decisions & Iterations
+
+**Started with a modal, switched to a dedicated page**
+- First implementation had a "Manage" button that opened a flyout modal
+- User feedback: clicking a name should go to a page with the familiar skills UI
+- Refactored to reuse SkillsEditor component - much cleaner, consistent UX
+
+**Admin context awareness in SkillsEditor**
+- Added `isAdminContext` computed property (checks if `userId !== Auth::id()`)
+- Hides "Suggest Skill" button when admin is viewing another user
+- Toggle label changes from "my skills" to "their skills"
+- Toggle defaults to ON in admin context (show what the user has, not everything)
+
+**"None" radio button selection**
+- User noticed that skills without a level didn't show "None" as selected
+- Required pre-populating `userSkillLevels` array with "none" for all visible skills
+
+### Technical Gotchas
+
+**Livewire hydration with Eloquent models**
+- First attempt: stored `public ?User $user` property
+- Problem: Livewire's dehydration/hydration between requests wasn't reliable
+- Tests passed but real usage had null user errors
+- Fix: Store `public ?int $userId` instead, use computed property to load User
+- Lesson: For Livewire properties that need to survive across requests, prefer IDs over models
+
+**Passing parameters to nested Livewire components**
+- Using `<livewire:skills-editor :user="$user" />` with a User model was unreliable
+- Switched to `<livewire:skills-editor :user-id="$user->id" />` (passing the int)
+- The mount signature changed from `?User $user = null` to `?int $userId = null`
+
+**loadUserSkillLevels() evolution**
+Three iterations to get it right:
+
+1. First: Only loaded user's actual skill levels
+   - Problem: "None" radio not selected for unassigned skills
+
+2. Second: Pre-populated from `$this->skills` computed property
+   - Problem: In admin context with toggle ON, only showed user's existing skills
+   - Unassigned skills still didn't get "none" default
+
+3. Third: Query all approved skills separately, merge with actual levels
+   - Problem: Pending skills (like Rust) weren't included
+   - User's pending skills showed with no level selected
+
+4. Final solution:
+```php
+$actualLevels = $this->user->skills()->pluck(...);  // Includes pending
+$approvedDefaults = Skill::approved()->pluck(...);  // All approved = "none"
+$this->userSkillLevels = $actualLevels + $approvedDefaults;  // Merge
+```
+The `+` operator keeps left-side values for duplicate keys, so actual levels take precedence.
+
+### What's Next
+
+Created epic `skillsdb-74m` - Skills Matrix Report:
+- `.1` - Skills matrix table/grid view (users × skills, colour-coded)
+- `.2` - Filter by skills ("who knows Linux?")
+- `.3` - Filter by users ("what can these people do?")
+- `.4` - Excel export of matrix (supersedes old standalone export issue)
+
+This completes Phase 1 core functionality. The matrix report is the last piece before moving to Phase 2 (API, gamification, etc.).
+
+---
+
 *Add new entries above this line*
