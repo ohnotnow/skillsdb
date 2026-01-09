@@ -1,0 +1,30 @@
+name: Fix Code Style
+
+on: [push]
+
+jobs:
+  code-checks:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Check for dd() and dump()
+        run: "! egrep -r '(^|[^a-zA-Z])(dd|dump)\\(' app"
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ vars.PHP_VERSION }}
+          tools: pint, composer:v2
+
+      - name: Security Scan
+        run: composer audit
+
+      - name: Run Pint
+        run: pint --test
+
+
