@@ -9,12 +9,14 @@
         </div>
         <div class="flex gap-4 items-center">
             <flux:field variant="inline">
-                <flux:label>Show only my skills</flux:label>
+                <flux:label>Show only {{ $this->isAdminContext ? 'their' : 'my' }} skills</flux:label>
                 <flux:switch wire:model.live="showMySkillsOnly" />
             </flux:field>
-            <flux:button wire:click="openSuggestModal" icon="plus">
-                Suggest Skill
-            </flux:button>
+            @unless ($this->isAdminContext)
+                <flux:button wire:click="openSuggestModal" icon="plus">
+                    Suggest Skill
+                </flux:button>
+            @endunless
         </div>
     </div>
 
@@ -71,46 +73,48 @@
         </div>
     @endif
 
-    <flux:modal wire:model="showSuggestModal" variant="flyout">
-        <form wire:submit="suggestSkill">
-            <div class="space-y-6">
-                <div>
-                    <flux:heading size="lg">Suggest a New Skill</flux:heading>
-                    <flux:text class="mt-2">
-                        Suggest a skill to be added to the system. It will be reviewed by an admin before becoming available to everyone.
-                    </flux:text>
+    @unless ($this->isAdminContext)
+        <flux:modal wire:model="showSuggestModal" variant="flyout">
+            <form wire:submit="suggestSkill">
+                <div class="space-y-6">
+                    <div>
+                        <flux:heading size="lg">Suggest a New Skill</flux:heading>
+                        <flux:text class="mt-2">
+                            Suggest a skill to be added to the system. It will be reviewed by an admin before becoming available to everyone.
+                        </flux:text>
+                    </div>
+
+                    <div class="space-y-4">
+                        <flux:field>
+                            <flux:label>Skill Name</flux:label>
+                            <flux:input wire:model="newSkillName" placeholder="e.g., Kubernetes" />
+                            <flux:error name="newSkillName" />
+                        </flux:field>
+
+                        <flux:field>
+                            <flux:label>Description</flux:label>
+                            <flux:textarea wire:model="newSkillDescription" placeholder="Brief description of the skill..." rows="3" />
+                            <flux:error name="newSkillDescription" />
+                        </flux:field>
+
+                        <flux:field>
+                            <flux:label>Your Level</flux:label>
+                            <flux:select wire:model="newSkillLevel">
+                                <flux:select.option value="">Select your level...</flux:select.option>
+                                @foreach ($this->skillLevels as $level)
+                                    <flux:select.option value="{{ $level->value }}">{{ $level->label() }}</flux:select.option>
+                                @endforeach
+                            </flux:select>
+                            <flux:error name="newSkillLevel" />
+                        </flux:field>
+                    </div>
+
+                    <div class="flex justify-end gap-3">
+                        <flux:button type="button" variant="ghost" wire:click="closeSuggestModal">Cancel</flux:button>
+                        <flux:button type="submit" variant="primary">Suggest Skill</flux:button>
+                    </div>
                 </div>
-
-                <div class="space-y-4">
-                    <flux:field>
-                        <flux:label>Skill Name</flux:label>
-                        <flux:input wire:model="newSkillName" placeholder="e.g., Kubernetes" />
-                        <flux:error name="newSkillName" />
-                    </flux:field>
-
-                    <flux:field>
-                        <flux:label>Description</flux:label>
-                        <flux:textarea wire:model="newSkillDescription" placeholder="Brief description of the skill..." rows="3" />
-                        <flux:error name="newSkillDescription" />
-                    </flux:field>
-
-                    <flux:field>
-                        <flux:label>Your Level</flux:label>
-                        <flux:select wire:model="newSkillLevel">
-                            <flux:select.option value="">Select your level...</flux:select.option>
-                            @foreach ($this->skillLevels as $level)
-                                <flux:select.option value="{{ $level->value }}">{{ $level->label() }}</flux:select.option>
-                            @endforeach
-                        </flux:select>
-                        <flux:error name="newSkillLevel" />
-                    </flux:field>
-                </div>
-
-                <div class="flex justify-end gap-3">
-                    <flux:button type="button" variant="ghost" wire:click="closeSuggestModal">Cancel</flux:button>
-                    <flux:button type="submit" variant="primary">Suggest Skill</flux:button>
-                </div>
-            </div>
-        </form>
-    </flux:modal>
+            </form>
+        </flux:modal>
+    @endunless
 </div>

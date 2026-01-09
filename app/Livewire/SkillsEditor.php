@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Enums\SkillLevel;
 use App\Models\Skill;
+use App\Models\User;
 use Flux;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -12,6 +13,8 @@ use Livewire\Component;
 
 class SkillsEditor extends Component
 {
+    public ?int $userId = null;
+
     #[Url]
     public $search = '';
 
@@ -29,24 +32,37 @@ class SkillsEditor extends Component
 
     public $newSkillLevel = '';
 
-    public function mount(): void
+    public function mount(?User $user = null): void
     {
+        $this->userId = $user?->id ?? Auth::id();
         $this->loadUserSkillLevels();
+    }
+
+    #[Computed]
+    public function user(): User
+    {
+        return User::findOrFail($this->userId);
+    }
+
+    #[Computed]
+    public function isAdminContext(): bool
+    {
+        return $this->userId !== Auth::id();
     }
 
     #[Computed]
     public function skills()
     {
-        $user = Auth::user();
+        $userId = $this->userId;
 
         return Skill::query()
             ->with('category')
-            ->where(function ($query) use ($user) {
+            ->where(function ($query) use ($userId) {
                 // Show approved skills
                 $query->approved()
                     // OR pending skills created by this user (they can use their own suggestions)
-                    ->orWhere(function ($q) use ($user) {
-                        $q->pending()->whereHas('users', fn ($q) => $q->where('user_id', $user->id));
+                    ->orWhere(function ($q) use ($userId) {
+                        $q->pending()->whereHas('users', fn ($q) => $q->where('user_id', $userId));
                     });
             })
             ->when($this->search, function ($query) {
@@ -56,8 +72,8 @@ class SkillsEditor extends Component
                         ->orWhereHas('category', fn ($q) => $q->where('name', 'like', "%{$this->search}%"));
                 });
             })
-            ->when($this->showMySkillsOnly, function ($query) use ($user) {
-                $query->whereHas('users', fn ($q) => $q->where('user_id', $user->id));
+            ->when($this->showMySkillsOnly, function ($query) use ($userId) {
+                $query->whereHas('users', fn ($q) => $q->where('user_id', $userId));
             })
             ->orderBy('name')
             ->get();
@@ -76,7 +92,7 @@ class SkillsEditor extends Component
 
     public function updateSkillLevel(int $skillId, string $level): void
     {
-        $user = Auth::user();
+        $user = $this->user;
 
         if ($level === 'none' || $level === '') {
             $user->skills()->detach($skillId);
@@ -109,8 +125,6 @@ class SkillsEditor extends Component
             'newSkillLevel' => ['required', 'in:1,2,3'],
         ]);
 
-        $user = Auth::user();
-
         // Create pending skill (no approved_by or approved_at)
         $skill = Skill::create([
             'name' => $this->newSkillName,
@@ -118,6 +132,7 @@ class SkillsEditor extends Component
         ]);
 
         // Attach to user with the selected level
+        $user = $this->user;
         $user->skills()->attach($skill->id, ['level' => (int) $this->newSkillLevel]);
         $user->touchSkillsUpdatedAt();
 
@@ -138,8 +153,7 @@ class SkillsEditor extends Component
 
     private function loadUserSkillLevels(): void
     {
-        $user = Auth::user();
-        $this->userSkillLevels = $user->skills()
+        $this->userSkillLevels = $this->user->skills()
             ->pluck('skill_user.level', 'skills.id')
             ->map(fn ($level) => (string) $level)
             ->toArray();

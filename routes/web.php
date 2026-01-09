@@ -1,6 +1,8 @@
 <?php
 
 use App\Livewire\Admin\SkillsManager;
+use App\Livewire\Admin\UserSkillsEditor;
+use App\Livewire\Admin\UserSkillsManager;
 use App\Livewire\HomePage;
 use Illuminate\Support\Facades\Route;
 
@@ -11,5 +13,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/skills', SkillsManager::class)->name('skills');
+        Route::get('/users', UserSkillsManager::class)->name('users');
+        Route::get('/users/{user}', UserSkillsEditor::class)->name('users.skills');
     });
 });
