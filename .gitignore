@@ -30,3 +30,5 @@ auth.json
 !/storage/meilisearch/.gitkeep*
 npm-debug.log
 yarn-error.log
+PROJECT_PLAN.md
+
