@@ -50,14 +50,31 @@ it('embeds the skills editor component for the user', function () {
         ->assertSeeLivewire(SkillsEditor::class);
 });
 
-it('shows approved skills', function () {
+it('defaults to showing only users skills in admin context', function () {
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->create();
+    $phpSkill = Skill::factory()->approved()->create(['name' => 'PHP']);
+    Skill::factory()->approved()->create(['name' => 'JavaScript']);
+
+    // User only has PHP
+    $user->skills()->attach($phpSkill->id, ['level' => 2]);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsEditor::class, ['userId' => $user->id])
+        ->assertSet('showMySkillsOnly', true)
+        ->assertSee('PHP')
+        ->assertDontSee('JavaScript');
+});
+
+it('shows all skills when toggle is turned off', function () {
     $admin = User::factory()->admin()->create();
     $user = User::factory()->create();
     Skill::factory()->approved()->create(['name' => 'PHP']);
     Skill::factory()->approved()->create(['name' => 'JavaScript']);
 
-    $this->actingAs($admin)
-        ->get("/admin/users/{$user->id}")
+    Livewire::actingAs($admin)
+        ->test(SkillsEditor::class, ['userId' => $user->id])
+        ->set('showMySkillsOnly', false)
         ->assertSee('PHP')
         ->assertSee('JavaScript');
 });
@@ -80,7 +97,7 @@ it('can assign a skill to the user', function () {
     expect($user->skills)->toHaveCount(0);
 
     Livewire::actingAs($admin)
-        ->test(SkillsEditor::class, ['user' => $user])
+        ->test(SkillsEditor::class, ['userId' => $user->id])
         ->call('updateSkillLevel', $skill->id, '2');
 
     expect($user->fresh()->skills)->toHaveCount(1);
@@ -94,7 +111,7 @@ it('can update a users skill level', function () {
     $user->skills()->attach($skill->id, ['level' => 1]);
 
     Livewire::actingAs($admin)
-        ->test(SkillsEditor::class, ['user' => $user])
+        ->test(SkillsEditor::class, ['userId' => $user->id])
         ->call('updateSkillLevel', $skill->id, '3');
 
     expect($user->fresh()->skills->first()->pivot->level)->toBe(3);
@@ -107,7 +124,7 @@ it('can remove a skill from a user', function () {
     $user->skills()->attach($skill->id, ['level' => 2]);
 
     Livewire::actingAs($admin)
-        ->test(SkillsEditor::class, ['user' => $user])
+        ->test(SkillsEditor::class, ['userId' => $user->id])
         ->call('updateSkillLevel', $skill->id, 'none');
 
     expect($user->fresh()->skills)->toHaveCount(0);
@@ -121,7 +138,7 @@ it('updates users last_updated_skills_at when skills are changed', function () {
     expect($user->last_updated_skills_at)->toBeNull();
 
     Livewire::actingAs($admin)
-        ->test(SkillsEditor::class, ['user' => $user])
+        ->test(SkillsEditor::class, ['userId' => $user->id])
         ->call('updateSkillLevel', $skill->id, '2');
 
     expect($user->fresh()->last_updated_skills_at)->not->toBeNull();
@@ -132,7 +149,7 @@ it('does not show suggest skill button in admin context', function () {
     $user = User::factory()->create();
 
     Livewire::actingAs($admin)
-        ->test(SkillsEditor::class, ['user' => $user])
+        ->test(SkillsEditor::class, ['userId' => $user->id])
         ->assertDontSee('Suggest Skill');
 });
 
@@ -141,7 +158,7 @@ it('shows their instead of my in filter label for admin context', function () {
     $user = User::factory()->create();
 
     Livewire::actingAs($admin)
-        ->test(SkillsEditor::class, ['user' => $user])
+        ->test(SkillsEditor::class, ['userId' => $user->id])
         ->assertSee('Show only their skills');
 });
 

@@ -32,9 +32,15 @@ class SkillsEditor extends Component
 
     public $newSkillLevel = '';
 
-    public function mount(?User $user = null): void
+    public function mount(?int $userId = null): void
     {
-        $this->userId = $user?->id ?? Auth::id();
+        $this->userId = $userId ?? Auth::id();
+
+        // In admin context, default to showing only the user's skills
+        if ($this->userId !== Auth::id()) {
+            $this->showMySkillsOnly = true;
+        }
+
         $this->loadUserSkillLevels();
     }
 
@@ -153,9 +159,16 @@ class SkillsEditor extends Component
 
     private function loadUserSkillLevels(): void
     {
-        $this->userSkillLevels = $this->user->skills()
+        // Get the user's actual skill levels
+        $actualLevels = $this->user->skills()
             ->pluck('skill_user.level', 'skills.id')
             ->map(fn ($level) => (string) $level)
+            ->toArray();
+
+        // Pre-populate all visible skills with "none", then overlay actual levels
+        $this->userSkillLevels = $this->skills
+            ->pluck('id')
+            ->mapWithKeys(fn ($id) => [$id => $actualLevels[$id] ?? 'none'])
             ->toArray();
     }
 }
