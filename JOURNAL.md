@@ -121,7 +121,7 @@ SkillsDB is extracting skills tracking functionality from an existing applicatio
 
 ### Still To Do (Phase 1)
 
-- Admin skills management (CRUD, approve pending)
+- ~~Admin skills management (CRUD, approve pending)~~ ✓ Done
 - Admin user skills management (manage skills for any user)
 - Excel export (using SimpleSpout - see example-simple-spout.txt)
 
@@ -131,6 +131,95 @@ SkillsDB is extracting skills tracking functionality from an existing applicatio
 - Skills Coach (LLM-powered career suggestions)
 - Notifications for admins when skills are suggested
 - API endpoints via Sanctum
+
+---
+
+## 2026-01-09 - Admin Skills Management
+
+### What We Built
+
+Admin skills management page at `/admin/skills`:
+- Table listing all skills with search
+- Create/edit skills via flyout modal
+- Delete with confirmation
+- Approve pending skills (one-click from dropdown)
+- Pending skills show inline badge + requester's name instead of user count
+
+New files:
+- `app/Http/Middleware/AdminMiddleware.php` - simple `isAdmin()` check, aborts 403
+- `app/Livewire/Admin/SkillsManager.php` - full-page component
+- `resources/views/livewire/admin/skills-manager.blade.php`
+- `tests/Feature/Livewire/Admin/SkillsManagerTest.php` - 18 tests
+
+The middleware is registered in `bootstrap/app.php` with alias `'admin'`.
+
+### Things That Caught Us Out
+
+**Flux::toast() signature gotcha**
+- First attempt: `Flux::toast(variant: 'success', heading: 'Done!')` - FAILED
+- The first positional argument `$text` is required, even with named params
+- Fix: `Flux::toast(heading: 'Done!', text: '', variant: 'success')`
+- The existing SkillsEditor code worked because it always passed `text:`
+
+### Design Decisions & Simplifications
+
+**Removed the "Status" column**
+- Initially had a column showing "Approved" or "Pending" badges for every skill
+- But 99% of skills will be approved - showing "Approved" on everything is noise
+- Simplified: pending badge appears inline before the skill name, only when pending
+- No badge = approved (the expected default)
+
+**Removed "Show pending only" toggle**
+- Initially built a toggle with pending count badge
+- But pending skills are rare (maybe a few per year)
+- YAGNI - removed the toggle, filter logic, computed property, and tests
+- The search still works if you need to find something specific
+
+**Pending skills show requester name, not user count**
+- A pending skill will only have one user (the person who suggested it)
+- Showing "1" isn't helpful - showing "J. Smith" tells the admin who asked for it
+- Approved skills still show the count
+
+### User Model Additions
+
+Added attribute accessors (modern Laravel syntax):
+```php
+protected function fullName(): Attribute
+{
+    return Attribute::get(fn () => "{$this->forenames} {$this->surname}");
+}
+
+protected function shortName(): Attribute
+{
+    return Attribute::get(fn () => substr($this->forenames, 0, 1).'. '.$this->surname);
+}
+```
+
+Note: `fullName()` was previously a regular method - now it's `$user->full_name`.
+
+### TestDataSeeder Fix
+
+The pending "Rust" skill wasn't attached to any user, which looked weird in the admin UI (no requester shown). Fixed by attaching it to the standard user in `assignSkillsToUsers()`.
+
+### Meta: On Sub-Agents and the Beads Tool
+
+We discussed whether a sub-agent for the `bd` (beads) issue tracker would help. Conclusion: **no**.
+
+Why `bd` works well without a sub-agent:
+- Commands are quick, output is concise (a few lines)
+- Seeing the issue list helps maintain project context
+- Closing an issue is a semantic decision, not just a command
+- Only used 2-3 times per task - minimal overhead
+
+Sub-agents make sense for: long-running tasks, large output that needs summarising, work that can run in parallel. `bd` is more like glancing at a post-it note.
+
+The `bd` tool was designed by Steve Yegge specifically to be AI-friendly - and it shows. Hierarchical IDs, scannable output, sensible defaults, combined actions (`--claim`), workflow helpers (`--suggest-next`).
+
+### Philosophy Note
+
+Recording what *didn't* work is as valuable as recording what did. The "show pending only" feature was built, tested, worked perfectly... and then removed because it wasn't actually needed. That's not failure - that's learning. Academia has a "negative results" problem; we shouldn't.
+
+"Success is a bad teacher" - we learn more from the things we backed out of than the things that worked first time.
 
 ---
 
