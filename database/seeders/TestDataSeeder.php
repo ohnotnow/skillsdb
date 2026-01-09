@@ -126,12 +126,13 @@ class TestDataSeeder extends Seeder
         ]);
         $adminUser->touchSkillsUpdatedAt();
 
-        // Standard user skills
+        // Standard user skills (including the pending skill they suggested)
         $standardUser->skills()->attach([
             $skills['php']->id => ['level' => SkillLevel::Medium->value],
             $skills['laravel']->id => ['level' => SkillLevel::Low->value],
             $skills['python']->id => ['level' => SkillLevel::High->value],
             $skills['git']->id => ['level' => SkillLevel::Medium->value],
+            $skills['rust']->id => ['level' => SkillLevel::Low->value],
         ]);
         $standardUser->touchSkillsUpdatedAt();
     }

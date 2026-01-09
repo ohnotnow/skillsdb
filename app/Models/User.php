@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\SkillLevel;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -49,16 +50,23 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    // Accessors
+
+    protected function fullName(): Attribute
+    {
+        return Attribute::get(fn () => "{$this->forenames} {$this->surname}");
+    }
+
+    protected function shortName(): Attribute
+    {
+        return Attribute::get(fn () => substr($this->forenames, 0, 1).'. '.$this->surname);
+    }
+
     // Custom methods
 
     public function isAdmin(): bool
     {
         return $this->is_admin;
-    }
-
-    public function fullName(): string
-    {
-        return "{$this->forenames} {$this->surname}";
     }
 
     public function touchSkillsUpdatedAt(): void
