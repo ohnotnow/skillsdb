@@ -159,16 +159,19 @@ class SkillsEditor extends Component
 
     private function loadUserSkillLevels(): void
     {
-        // Get the user's actual skill levels
+        // Get the user's actual skill levels (includes any pending skills they have)
         $actualLevels = $this->user->skills()
             ->pluck('skill_user.level', 'skills.id')
             ->map(fn ($level) => (string) $level)
             ->toArray();
 
-        // Pre-populate ALL approved skills with "none", then overlay actual levels
-        $this->userSkillLevels = Skill::approved()
+        // Default all approved skills to "none"
+        $approvedDefaults = Skill::approved()
             ->pluck('id')
-            ->mapWithKeys(fn ($id) => [$id => $actualLevels[$id] ?? 'none'])
+            ->mapWithKeys(fn ($id) => [$id => 'none'])
             ->toArray();
+
+        // Merge: actual levels take precedence, then fill in approved defaults
+        $this->userSkillLevels = $actualLevels + $approvedDefaults;
     }
 }
