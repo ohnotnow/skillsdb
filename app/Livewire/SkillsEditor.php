@@ -165,8 +165,8 @@ class SkillsEditor extends Component
             ->map(fn ($level) => (string) $level)
             ->toArray();
 
-        // Pre-populate all visible skills with "none", then overlay actual levels
-        $this->userSkillLevels = $this->skills
+        // Pre-populate ALL approved skills with "none", then overlay actual levels
+        $this->userSkillLevels = Skill::approved()
             ->pluck('id')
             ->mapWithKeys(fn ($id) => [$id => $actualLevels[$id] ?? 'none'])
             ->toArray();
