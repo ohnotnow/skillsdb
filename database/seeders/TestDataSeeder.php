@@ -2,16 +2,20 @@
 
 namespace Database\Seeders;
 
+use App\Enums\SkillLevel;
+use App\Models\Skill;
+use App\Models\SkillCategory;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Carbon;
 
 class TestDataSeeder extends Seeder
 {
-
     public function run(): void
     {
-        // [$adminUser, $standardUser] = $this->createUsers();
+        [$adminUser, $standardUser] = $this->createUsers();
+        $categories = $this->createSkillCategories();
+        $skills = $this->createSkills($adminUser, $categories);
+        $this->assignSkillsToUsers($adminUser, $standardUser, $skills);
     }
 
     private function createUsers(): array
@@ -37,4 +41,98 @@ class TestDataSeeder extends Seeder
         return [$adminUser, $standardUser];
     }
 
+    private function createSkillCategories(): array
+    {
+        return [
+            'programming' => SkillCategory::create(['name' => 'Programming Languages']),
+            'frameworks' => SkillCategory::create(['name' => 'Frameworks']),
+            'devops' => SkillCategory::create(['name' => 'DevOps']),
+            'databases' => SkillCategory::create(['name' => 'Databases']),
+        ];
+    }
+
+    private function createSkills(User $adminUser, array $categories): array
+    {
+        $skills = [];
+
+        // Programming Languages
+        $skills['php'] = Skill::factory()->approved($adminUser)->create([
+            'name' => 'PHP',
+            'description' => 'Server-side scripting language',
+            'skill_category_id' => $categories['programming']->id,
+        ]);
+        $skills['javascript'] = Skill::factory()->approved($adminUser)->create([
+            'name' => 'JavaScript',
+            'description' => 'Client-side and server-side scripting language',
+            'skill_category_id' => $categories['programming']->id,
+        ]);
+        $skills['python'] = Skill::factory()->approved($adminUser)->create([
+            'name' => 'Python',
+            'description' => 'General-purpose programming language',
+            'skill_category_id' => $categories['programming']->id,
+        ]);
+
+        // Frameworks
+        $skills['laravel'] = Skill::factory()->approved($adminUser)->create([
+            'name' => 'Laravel',
+            'description' => 'PHP web application framework',
+            'skill_category_id' => $categories['frameworks']->id,
+        ]);
+        $skills['vue'] = Skill::factory()->approved($adminUser)->create([
+            'name' => 'Vue.js',
+            'description' => 'Progressive JavaScript framework',
+            'skill_category_id' => $categories['frameworks']->id,
+        ]);
+
+        // DevOps
+        $skills['docker'] = Skill::factory()->approved($adminUser)->create([
+            'name' => 'Docker',
+            'description' => 'Container platform',
+            'skill_category_id' => $categories['devops']->id,
+        ]);
+        $skills['git'] = Skill::factory()->approved($adminUser)->create([
+            'name' => 'Git',
+            'description' => 'Version control system',
+            'skill_category_id' => $categories['devops']->id,
+        ]);
+
+        // Databases
+        $skills['mysql'] = Skill::factory()->approved($adminUser)->create([
+            'name' => 'MySQL',
+            'description' => 'Relational database management system',
+            'skill_category_id' => $categories['databases']->id,
+        ]);
+
+        // A pending skill (suggested but not approved)
+        $skills['rust'] = Skill::factory()->pending()->create([
+            'name' => 'Rust',
+            'description' => 'Systems programming language',
+            'skill_category_id' => $categories['programming']->id,
+        ]);
+
+        return $skills;
+    }
+
+    private function assignSkillsToUsers(User $adminUser, User $standardUser, array $skills): void
+    {
+        // Admin user skills
+        $adminUser->skills()->attach([
+            $skills['php']->id => ['level' => SkillLevel::High->value],
+            $skills['laravel']->id => ['level' => SkillLevel::High->value],
+            $skills['javascript']->id => ['level' => SkillLevel::Medium->value],
+            $skills['docker']->id => ['level' => SkillLevel::Medium->value],
+            $skills['git']->id => ['level' => SkillLevel::High->value],
+            $skills['mysql']->id => ['level' => SkillLevel::Medium->value],
+        ]);
+        $adminUser->touchSkillsUpdatedAt();
+
+        // Standard user skills
+        $standardUser->skills()->attach([
+            $skills['php']->id => ['level' => SkillLevel::Medium->value],
+            $skills['laravel']->id => ['level' => SkillLevel::Low->value],
+            $skills['python']->id => ['level' => SkillLevel::High->value],
+            $skills['git']->id => ['level' => SkillLevel::Medium->value],
+        ]);
+        $standardUser->touchSkillsUpdatedAt();
+    }
 }

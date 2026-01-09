@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\SkillLevel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -12,11 +13,6 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'username',
         'forenames',
@@ -25,23 +21,14 @@ class User extends Authenticatable
         'is_admin',
         'email',
         'password',
+        'last_updated_skills_at',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -49,6 +36,40 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_staff' => 'boolean',
             'is_admin' => 'boolean',
+            'last_updated_skills_at' => 'datetime',
         ];
+    }
+
+    // Relationships
+
+    public function skills(): BelongsToMany
+    {
+        return $this->belongsToMany(Skill::class)
+            ->withPivot('level')
+            ->withTimestamps();
+    }
+
+    // Custom methods
+
+    public function isAdmin(): bool
+    {
+        return $this->is_admin;
+    }
+
+    public function fullName(): string
+    {
+        return "{$this->forenames} {$this->surname}";
+    }
+
+    public function touchSkillsUpdatedAt(): void
+    {
+        $this->update(['last_updated_skills_at' => now()]);
+    }
+
+    public function getSkillLevel(Skill $skill): ?SkillLevel
+    {
+        $pivot = $this->skills->find($skill->id)?->pivot;
+
+        return $pivot ? SkillLevel::from($pivot->level) : null;
     }
 }
