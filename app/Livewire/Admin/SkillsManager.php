@@ -17,9 +17,6 @@ class SkillsManager extends Component
     #[Url]
     public $search = '';
 
-    #[Url]
-    public $showPendingOnly = false;
-
     // Create/Edit modal state
     public bool $showSkillModal = false;
 
@@ -40,7 +37,6 @@ class SkillsManager extends Component
         return Skill::query()
             ->with(['category', 'users'])
             ->withCount('users')
-            ->when($this->showPendingOnly, fn ($query) => $query->pending())
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
                     $q->where('name', 'like', "%{$this->search}%")
@@ -57,12 +53,6 @@ class SkillsManager extends Component
     public function categories()
     {
         return SkillCategory::orderBy('name')->get();
-    }
-
-    #[Computed]
-    public function pendingCount(): int
-    {
-        return Skill::pending()->count();
     }
 
     public function openCreateModal(): void
@@ -113,7 +103,7 @@ class SkillsManager extends Component
         }
 
         $this->closeSkillModal();
-        unset($this->skills, $this->pendingCount);
+        unset($this->skills);
 
         Flux::toast(heading: $message, text: '', variant: 'success');
     }
@@ -138,7 +128,7 @@ class SkillsManager extends Component
         $skill->delete();
 
         $this->deletingSkillId = null;
-        unset($this->skills, $this->pendingCount);
+        unset($this->skills);
 
         Flux::toast(heading: 'Skill deleted.', text: '', variant: 'success');
     }
@@ -152,7 +142,7 @@ class SkillsManager extends Component
             'approved_at' => now(),
         ]);
 
-        unset($this->skills, $this->pendingCount);
+        unset($this->skills);
 
         Flux::toast(variant: 'success', heading: 'Skill approved.', text: "'{$skill->name}' is now visible to all users.");
     }

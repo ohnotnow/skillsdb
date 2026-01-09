@@ -6,23 +6,12 @@
         </flux:button>
     </div>
 
-    <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center mb-6">
-        <div class="flex-1 w-full">
-            <flux:input
-                wire:model.live.debounce.300ms="search"
-                placeholder="Search skills by name, description, or category..."
-                icon="magnifying-glass"
-            />
-        </div>
-        <flux:field variant="inline">
-            <flux:label>
-                Show pending only
-                @if ($this->pendingCount > 0)
-                    <flux:badge size="sm" color="amber" class="ml-1">{{ $this->pendingCount }}</flux:badge>
-                @endif
-            </flux:label>
-            <flux:switch wire:model.live="showPendingOnly" />
-        </flux:field>
+    <div class="mb-6">
+        <flux:input
+            wire:model.live.debounce.300ms="search"
+            placeholder="Search skills by name, description, or category..."
+            icon="magnifying-glass"
+        />
     </div>
 
     @if ($this->skills->count() > 0)
@@ -81,8 +70,8 @@
             <flux:icon name="rectangle-stack" class="w-12 h-12 mx-auto text-zinc-400 mb-4" />
             <flux:heading size="lg" class="mb-2">No skills found</flux:heading>
             <flux:text>
-                @if ($search || $showPendingOnly)
-                    No skills match your current filters. Try adjusting your search or clearing filters.
+                @if ($search)
+                    No skills match your search. Try a different term.
                 @else
                     No skills have been created yet. Add one to get started.
                 @endif

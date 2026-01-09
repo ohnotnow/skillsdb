@@ -49,20 +49,6 @@ it('shows pending badge for pending skills', function () {
         ->assertSee('Pending');
 });
 
-it('can filter to show only pending skills', function () {
-    $admin = User::factory()->admin()->create();
-    Skill::factory()->approved()->create(['name' => 'PHP']);
-    Skill::factory()->pending()->create(['name' => 'Rust']);
-
-    Livewire::actingAs($admin)
-        ->test(SkillsManager::class)
-        ->assertSee('PHP')
-        ->assertSee('Rust')
-        ->set('showPendingOnly', true)
-        ->assertDontSee('PHP')
-        ->assertSee('Rust');
-});
-
 it('can search skills by name', function () {
     $admin = User::factory()->admin()->create();
     Skill::factory()->approved()->create(['name' => 'PHP']);
@@ -248,16 +234,6 @@ it('shows user count for each skill', function () {
     Livewire::actingAs($admin)
         ->test(SkillsManager::class)
         ->assertSee('3');
-});
-
-it('shows pending count badge', function () {
-    $admin = User::factory()->admin()->create();
-    Skill::factory()->pending()->count(5)->create();
-    Skill::factory()->approved()->count(3)->create();
-
-    Livewire::actingAs($admin)
-        ->test(SkillsManager::class)
-        ->assertSee('5');
 });
 
 it('shows requester name for pending skills', function () {
