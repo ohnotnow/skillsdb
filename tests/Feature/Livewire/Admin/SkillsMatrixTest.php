@@ -128,3 +128,103 @@ it('displays the legend', function () {
         ->assertSee('Medium')
         ->assertSee('High');
 });
+
+it('can filter by a single skill', function () {
+    $admin = User::factory()->admin()->create();
+    $docker = Skill::factory()->approved()->create(['name' => 'Docker']);
+    Skill::factory()->approved()->create(['name' => 'Git']);
+
+    $component = Livewire::actingAs($admin)
+        ->test(SkillsMatrix::class)
+        ->set('selectedSkills', [$docker->id]);
+
+    $skills = $component->instance()->skills;
+    expect($skills)->toHaveCount(1);
+    expect($skills->first()->name)->toBe('Docker');
+});
+
+it('can filter by multiple skills', function () {
+    $admin = User::factory()->admin()->create();
+    $docker = Skill::factory()->approved()->create(['name' => 'Docker']);
+    $git = Skill::factory()->approved()->create(['name' => 'Git']);
+    Skill::factory()->approved()->create(['name' => 'PHP']);
+
+    $component = Livewire::actingAs($admin)
+        ->test(SkillsMatrix::class)
+        ->set('selectedSkills', [$docker->id, $git->id]);
+
+    $skills = $component->instance()->skills;
+    expect($skills)->toHaveCount(2);
+    expect($skills->pluck('name')->toArray())->toContain('Docker', 'Git');
+    expect($skills->pluck('name')->toArray())->not->toContain('PHP');
+});
+
+it('can filter by a single user', function () {
+    $admin = User::factory()->admin()->create();
+    $alice = User::factory()->create(['forenames' => 'Alice', 'surname' => 'Smith']);
+    User::factory()->create(['forenames' => 'Bob', 'surname' => 'Jones']);
+    Skill::factory()->approved()->create();
+
+    $component = Livewire::actingAs($admin)
+        ->test(SkillsMatrix::class)
+        ->set('selectedUsers', [$alice->id]);
+
+    $users = $component->instance()->users;
+    expect($users)->toHaveCount(1);
+    expect($users->first()->full_name)->toBe('Alice Smith');
+});
+
+it('can filter by multiple users', function () {
+    $admin = User::factory()->admin()->create();
+    $alice = User::factory()->create(['forenames' => 'Alice', 'surname' => 'Smith']);
+    $bob = User::factory()->create(['forenames' => 'Bob', 'surname' => 'Jones']);
+    User::factory()->create(['forenames' => 'Charlie', 'surname' => 'Brown']);
+    Skill::factory()->approved()->create();
+
+    $component = Livewire::actingAs($admin)
+        ->test(SkillsMatrix::class)
+        ->set('selectedUsers', [$alice->id, $bob->id]);
+
+    $users = $component->instance()->users;
+    expect($users)->toHaveCount(2);
+    expect($users->pluck('full_name')->toArray())->toContain('Alice Smith', 'Bob Jones');
+    expect($users->pluck('full_name')->toArray())->not->toContain('Charlie Brown');
+});
+
+it('can combine skill and user filters', function () {
+    $admin = User::factory()->admin()->create();
+    $alice = User::factory()->create(['forenames' => 'Alice', 'surname' => 'Smith']);
+    User::factory()->create(['forenames' => 'Bob', 'surname' => 'Jones']);
+    $docker = Skill::factory()->approved()->create(['name' => 'Docker']);
+    Skill::factory()->approved()->create(['name' => 'Git']);
+
+    $component = Livewire::actingAs($admin)
+        ->test(SkillsMatrix::class)
+        ->set('selectedUsers', [$alice->id])
+        ->set('selectedSkills', [$docker->id]);
+
+    $users = $component->instance()->users;
+    $skills = $component->instance()->skills;
+
+    expect($users)->toHaveCount(1);
+    expect($users->first()->full_name)->toBe('Alice Smith');
+    expect($skills)->toHaveCount(1);
+    expect($skills->first()->name)->toBe('Docker');
+});
+
+it('shows all data when filters are empty', function () {
+    $admin = User::factory()->admin()->create();
+    User::factory()->create(['forenames' => 'Alice', 'surname' => 'Smith']);
+    User::factory()->create(['forenames' => 'Bob', 'surname' => 'Jones']);
+    Skill::factory()->approved()->create(['name' => 'Docker']);
+    Skill::factory()->approved()->create(['name' => 'Git']);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsMatrix::class)
+        ->set('selectedUsers', [])
+        ->set('selectedSkills', [])
+        ->assertSee('Alice Smith')
+        ->assertSee('Bob Jones')
+        ->assertSee('Docker')
+        ->assertSee('Git');
+});
