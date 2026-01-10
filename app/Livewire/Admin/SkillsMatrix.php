@@ -8,6 +8,8 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Ohffs\SimpleSpout\ExcelSheet;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Layout('components.layouts.app')]
 class SkillsMatrix extends Component
@@ -48,6 +50,32 @@ class SkillsMatrix extends Component
     public function allSkills()
     {
         return Skill::approved()->orderBy('name')->get();
+    }
+
+    public function export(): StreamedResponse
+    {
+        $skills = $this->skills;
+        $users = $this->users;
+
+        $headers = ['Name', ...$skills->pluck('name')->toArray()];
+
+        $rows = $users->map(function ($user) use ($skills) {
+            $row = [$user->full_name];
+            foreach ($skills as $skill) {
+                $level = $user->getSkillLevel($skill);
+                $row[] = $level ? $level->label() : '';
+            }
+
+            return $row;
+        })->toArray();
+
+        $data = [$headers, ...$rows];
+
+        $filename = (new ExcelSheet)->generate($data);
+
+        return response()->streamDownload(function () use ($filename) {
+            echo file_get_contents($filename);
+        }, 'skills-matrix-'.now()->format('Y-m-d').'.xlsx');
     }
 
     public function render()

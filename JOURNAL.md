@@ -412,4 +412,111 @@ Lesson reinforced: only use positioning/layout classes (flex, grid, gap, padding
 
 ---
 
+## 2026-01-10 - Excel Export & API Token Management
+
+### What We Built
+
+**Excel Export for Skills Matrix**
+- Added export button to `/admin/matrix`
+- Uses SimpleSpout to generate `.xlsx` files
+- Respects current filters (skills and users)
+- Downloads as `skills-matrix-YYYY-MM-DD.xlsx`
+
+**API Token Management at `/admin/api-tokens`**
+- Full CRUD for Sanctum personal access tokens
+- Admins can see/delete all tokens across all users
+- Create modal with name + optional expiry date
+- Shows copyable token immediately after creation (only chance to see it!)
+- Table shows: name, created by, created at, last used, expiry status
+
+New files:
+- `app/Livewire/Admin/ApiTokensManager.php`
+- `resources/views/livewire/admin/api-tokens-manager.blade.php`
+- `tests/Feature/Livewire/Admin/ApiTokensManagerTest.php` - 16 tests
+- `database/migrations/2026_01_10_*_create_personal_access_tokens_table.php` (Sanctum)
+
+Modified:
+- `app/Models/User.php` - added `HasApiTokens` trait
+
+### Flux Modal Patterns Have Changed
+
+The old pattern used boolean properties:
+```php
+public bool $showModal = false;
+// Then wire:model="showModal" on the modal
+```
+
+The new pattern uses named modals with triggers:
+```blade
+<flux:modal.trigger name="create-thing">
+    <flux:button>Create</flux:button>
+</flux:modal.trigger>
+
+<flux:modal name="create-thing" variant="flyout" @close="resetForm">
+    <!-- content -->
+</flux:modal>
+```
+
+Benefits:
+- No boolean property to manage
+- `@close` event fires when modal closes (by any means)
+- `Flux::modal('name')->close()` to close programmatically
+- `<flux:modal.close>` wrapper for close buttons
+
+### Flux Input Shorthand
+
+Don't need `flux:field` + `flux:label` + `flux:error` boilerplate:
+```blade
+{{-- Old way --}}
+<flux:field>
+    <flux:label>Token Name</flux:label>
+    <flux:input wire:model="tokenName" />
+    <flux:error name="tokenName" />
+</flux:field>
+
+{{-- New way --}}
+<flux:input wire:model="tokenName" label="Token Name" />
+```
+
+The shorthand handles the field wrapper, label, and error display automatically.
+
+### Flux Date-Picker Min Value
+
+The `min` attribute only accepts:
+- A date string (`2026-01-15`)
+- The literal string `"today"`
+
+**Not valid**: `min="tomorrow"`
+
+For "tomorrow or later", compute it dynamically:
+```blade
+<flux:date-picker :min="now()->addDay()->format('Y-m-d')" />
+```
+
+### Flux::toast() Signature Reminder
+
+The `$text` parameter is required, even when using named parameters:
+```php
+// WRONG - will error
+Flux::toast(heading: 'Done!', variant: 'success');
+
+// RIGHT
+Flux::toast(heading: 'Done!', text: '', variant: 'success');
+```
+
+### Issue Tracking Lesson
+
+Started with issue "API endpoints (Sanctum)" but only built token management UI. Rather than stretching the issue to cover both:
+- Renamed existing issue to "API Token Management UI" and closed it
+- Created new issue for the actual endpoint work
+
+Cleaner history, each issue represents one deliverable.
+
+### What's Next
+
+- `skillsdb-6jq.5` - GET /api/users endpoint (Sanctum-protected) - for PowerBI integration
+- Phase 2 continues: notifications, gamification, skills coach
+
+---
+
 *Add new entries above this line*

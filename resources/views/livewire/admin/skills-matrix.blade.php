@@ -17,6 +17,8 @@
                     <flux:select.option value="{{ $user->id }}">{{ $user->full_name }}</flux:select.option>
                 @endforeach
             </flux:select>
+
+            <flux:button wire:click="export" icon="arrow-down-tray">Export</flux:button>
         </div>
     </div>
 

@@ -249,3 +249,123 @@ it('shows all data when filters are empty', function () {
         ->assertSee('Docker')
         ->assertSee('Git');
 });
+
+it('can export the matrix as Excel', function () {
+    $admin = User::factory()->admin()->create();
+    Skill::factory()->approved()->create(['name' => 'Docker']);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsMatrix::class)
+        ->call('export')
+        ->assertFileDownloaded('skills-matrix-'.now()->format('Y-m-d').'.xlsx');
+});
+
+it('export includes correct headers', function () {
+    $admin = User::factory()->admin()->create();
+    Skill::factory()->approved()->create(['name' => 'Docker']);
+    Skill::factory()->approved()->create(['name' => 'Git']);
+
+    $response = Livewire::actingAs($admin)
+        ->test(SkillsMatrix::class)
+        ->call('export');
+
+    $content = $response->effects['download']['content'];
+    $tempFile = tempnam(sys_get_temp_dir(), 'export_').'.xlsx';
+    file_put_contents($tempFile, base64_decode($content));
+
+    $data = (new \Ohffs\SimpleSpout\ExcelSheet)->importFirst($tempFile);
+    unlink($tempFile);
+
+    expect($data[0])->toBe(['Name', 'Docker', 'Git']);
+});
+
+it('export includes user data with skill levels', function () {
+    $admin = User::factory()->admin()->create();
+    $alice = User::factory()->create(['forenames' => 'Alice', 'surname' => 'Smith']);
+    $docker = Skill::factory()->approved()->create(['name' => 'Docker']);
+
+    $alice->skills()->attach($docker->id, ['level' => SkillLevel::High->value]);
+
+    $response = Livewire::actingAs($admin)
+        ->test(SkillsMatrix::class)
+        ->call('export');
+
+    $content = $response->effects['download']['content'];
+    $tempFile = tempnam(sys_get_temp_dir(), 'export_').'.xlsx';
+    file_put_contents($tempFile, base64_decode($content));
+
+    $data = (new \Ohffs\SimpleSpout\ExcelSheet)->importFirst($tempFile);
+    unlink($tempFile);
+
+    // Find Alice's row (users are sorted by surname, so admin might be first)
+    $aliceRow = collect($data)->first(fn ($row) => $row[0] === 'Alice Smith');
+    expect($aliceRow)->not->toBeNull();
+    expect($aliceRow[1])->toBe('High');
+});
+
+it('export shows empty string for skills user does not have', function () {
+    $admin = User::factory()->admin()->create();
+    $alice = User::factory()->create(['forenames' => 'Alice', 'surname' => 'Smith']);
+    Skill::factory()->approved()->create(['name' => 'Docker']);
+
+    // Alice has no skills attached
+
+    $response = Livewire::actingAs($admin)
+        ->test(SkillsMatrix::class)
+        ->call('export');
+
+    $content = $response->effects['download']['content'];
+    $tempFile = tempnam(sys_get_temp_dir(), 'export_').'.xlsx';
+    file_put_contents($tempFile, base64_decode($content));
+
+    $data = (new \Ohffs\SimpleSpout\ExcelSheet)->importFirst($tempFile);
+    unlink($tempFile);
+
+    $aliceRow = collect($data)->first(fn ($row) => $row[0] === 'Alice Smith');
+    expect($aliceRow)->not->toBeNull();
+    expect($aliceRow[1])->toBe('');
+});
+
+it('export respects skill filter', function () {
+    $admin = User::factory()->admin()->create();
+    $docker = Skill::factory()->approved()->create(['name' => 'Docker']);
+    Skill::factory()->approved()->create(['name' => 'Git']);
+
+    $response = Livewire::actingAs($admin)
+        ->test(SkillsMatrix::class)
+        ->set('selectedSkills', [$docker->id])
+        ->call('export');
+
+    $content = $response->effects['download']['content'];
+    $tempFile = tempnam(sys_get_temp_dir(), 'export_').'.xlsx';
+    file_put_contents($tempFile, base64_decode($content));
+
+    $data = (new \Ohffs\SimpleSpout\ExcelSheet)->importFirst($tempFile);
+    unlink($tempFile);
+
+    expect($data[0])->toBe(['Name', 'Docker']);
+    expect($data[0])->not->toContain('Git');
+});
+
+it('export respects user filter', function () {
+    $admin = User::factory()->admin()->create();
+    $alice = User::factory()->create(['forenames' => 'Alice', 'surname' => 'Smith']);
+    User::factory()->create(['forenames' => 'Bob', 'surname' => 'Jones']);
+    Skill::factory()->approved()->create(['name' => 'Docker']);
+
+    $response = Livewire::actingAs($admin)
+        ->test(SkillsMatrix::class)
+        ->set('selectedUsers', [$alice->id])
+        ->call('export');
+
+    $content = $response->effects['download']['content'];
+    $tempFile = tempnam(sys_get_temp_dir(), 'export_').'.xlsx';
+    file_put_contents($tempFile, base64_decode($content));
+
+    $data = (new \Ohffs\SimpleSpout\ExcelSheet)->importFirst($tempFile);
+    unlink($tempFile);
+
+    $names = collect($data)->skip(1)->pluck(0)->toArray();
+    expect($names)->toContain('Alice Smith');
+    expect($names)->not->toContain('Bob Jones');
+});
