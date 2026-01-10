@@ -1,21 +1,23 @@
 <div>
-    <div class="mb-6">
-        <flux:heading size="xl" level="1">Skills Matrix</flux:heading>
-        <flux:text class="mt-2">Overview of all team members and their skill levels.</flux:text>
-    </div>
+    <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <flux:heading size="xl" level="1">Skills Matrix</flux:heading>
+            <flux:text class="mt-2">Overview of all team members and their skill levels.</flux:text>
+        </div>
 
-    <div class="mb-6 flex flex-wrap gap-4">
-        <flux:select variant="listbox" multiple wire:model.live="selectedSkills" placeholder="Filter by skills...">
-            @foreach ($this->allSkills as $skill)
-                <flux:select.option value="{{ $skill->id }}">{{ $skill->name }}</flux:select.option>
-            @endforeach
-        </flux:select>
+        <div class="flex flex-col md:flex-row gap-4">
+            <flux:select variant="listbox" multiple wire:model.live="selectedSkills" placeholder="Filter by skills...">
+                @foreach ($this->allSkills as $skill)
+                    <flux:select.option value="{{ $skill->id }}">{{ $skill->name }}</flux:select.option>
+                @endforeach
+            </flux:select>
 
-        <flux:select variant="listbox" multiple wire:model.live="selectedUsers" placeholder="Filter by users...">
-            @foreach ($this->allUsers as $user)
-                <flux:select.option value="{{ $user->id }}">{{ $user->full_name }}</flux:select.option>
-            @endforeach
-        </flux:select>
+            <flux:select variant="listbox" multiple wire:model.live="selectedUsers" placeholder="Filter by users...">
+                @foreach ($this->allUsers as $user)
+                    <flux:select.option value="{{ $user->id }}">{{ $user->full_name }}</flux:select.option>
+                @endforeach
+            </flux:select>
+        </div>
     </div>
 
     @if ($this->users->count() > 0 && $this->skills->count() > 0)
