@@ -188,3 +188,15 @@ it('admins can delete tokens created by other admins', function () {
 
     expect(PersonalAccessToken::find($tokenId))->toBeNull();
 });
+
+it('shows usage examples with tabs for curl, python, and powerbi', function () {
+    $admin = User::factory()->admin()->create();
+
+    Livewire::actingAs($admin)
+        ->test(ApiTokensManager::class)
+        ->assertSee('Usage Examples')
+        ->assertSee('cURL')
+        ->assertSee('Python')
+        ->assertSee('Power BI')
+        ->assertSee('/api/users');
+});
