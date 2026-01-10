@@ -198,6 +198,8 @@ it('can combine skill and user filters', function () {
     $docker = Skill::factory()->approved()->create(['name' => 'Docker']);
     Skill::factory()->approved()->create(['name' => 'Git']);
 
+    $alice->skills()->attach($docker->id, ['level' => SkillLevel::High->value]);
+
     $component = Livewire::actingAs($admin)
         ->test(SkillsMatrix::class)
         ->set('selectedUsers', [$alice->id])
@@ -210,6 +212,25 @@ it('can combine skill and user filters', function () {
     expect($users->first()->full_name)->toBe('Alice Smith');
     expect($skills)->toHaveCount(1);
     expect($skills->first()->name)->toBe('Docker');
+});
+
+it('skill filter also filters users to those with selected skills', function () {
+    $admin = User::factory()->admin()->create();
+    $alice = User::factory()->create(['forenames' => 'Alice', 'surname' => 'Smith']);
+    $bob = User::factory()->create(['forenames' => 'Bob', 'surname' => 'Jones']);
+    $docker = Skill::factory()->approved()->create(['name' => 'Docker']);
+    $git = Skill::factory()->approved()->create(['name' => 'Git']);
+
+    $alice->skills()->attach($docker->id, ['level' => SkillLevel::High->value]);
+    // Bob has no skills
+
+    $component = Livewire::actingAs($admin)
+        ->test(SkillsMatrix::class)
+        ->set('selectedSkills', [$docker->id]);
+
+    $users = $component->instance()->users;
+    expect($users->pluck('full_name')->toArray())->toContain('Alice Smith');
+    expect($users->pluck('full_name')->toArray())->not->toContain('Bob Jones');
 });
 
 it('shows all data when filters are empty', function () {

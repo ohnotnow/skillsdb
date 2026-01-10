@@ -21,37 +21,42 @@
     </div>
 
     @if ($this->users->count() > 0 && $this->skills->count() > 0)
-        <flux:table>
-            <flux:table.columns>
-                <flux:table.column class="w-48">Name</flux:table.column>
+        <div class="overflow-x-auto">
+            <div class="inline-grid gap-px" style="grid-template-columns: auto repeat({{ $this->skills->count() }}, 3.5rem);">
+                {{-- Header row --}}
+                <div class="p-2 font-medium self-end">
+                    <flux:text>Name</flux:text>
+                </div>
                 @foreach ($this->skills as $skill)
-                    <flux:table.column wire:key="header-{{ $skill->id }}" class="h-32 w-14 relative">
-                        <div class="absolute bottom-2 left-4 origin-bottom-left -rotate-45 whitespace-nowrap">
+                    <div wire:key="header-{{ $skill->id }}" class="h-32 relative">
+                        <div class="absolute bottom-2 left-4 origin-bottom-left -rotate-45 whitespace-nowrap text-sm font-medium">
                             {{ $skill->name }}
                         </div>
-                    </flux:table.column>
+                    </div>
                 @endforeach
-            </flux:table.columns>
-            <flux:table.rows>
+
+                {{-- Data rows --}}
                 @foreach ($this->users as $user)
-                    <flux:table.row wire:key="row-{{ $user->id }}">
-                        <flux:table.cell>{{ $user->full_name }}</flux:table.cell>
-                        @foreach ($this->skills as $skill)
-                            <flux:table.cell wire:key="cell-{{ $user->id }}-{{ $skill->id }}" align="start">
-                                @php
-                                    $level = $user->getSkillLevel($skill);
-                                @endphp
-                                @if ($level)
-                                    <flux:badge size="sm" color="{{ $level->colour() }}">
-                                        {{ substr($level->label(), 0, 1) }}
-                                    </flux:badge>
-                                @endif
-                            </flux:table.cell>
-                        @endforeach
-                    </flux:table.row>
+                    <div wire:key="name-{{ $user->id }}" class="p-2">
+                        <flux:text>{{ $user->full_name }}</flux:text>
+                    </div>
+                    @foreach ($this->skills as $skill)
+                        <div wire:key="cell-{{ $user->id }}-{{ $skill->id }}" class="p-2">
+                            @php
+                                $level = $user->getSkillLevel($skill);
+                            @endphp
+                            @if ($level)
+                                <flux:badge size="sm" color="{{ $level->colour() }}">
+                                    {{ substr($level->label(), 0, 1) }}
+                                </flux:badge>
+                            @else
+                                <flux:badge size="sm" color="zinc" icon="minus-circle"></flux:badge>
+                            @endif
+                        </div>
+                    @endforeach
                 @endforeach
-            </flux:table.rows>
-        </flux:table>
+            </div>
+        </div>
 
         <div class="mt-4 flex flex-wrap gap-4">
             <div class="flex items-center gap-2">

@@ -12,10 +12,10 @@ use Livewire\Component;
 #[Layout('components.layouts.app')]
 class SkillsMatrix extends Component
 {
-    #[Url]
+    #[Url(except: '')]
     public array $selectedSkills = [];
 
-    #[Url]
+    #[Url(except: '')]
     public array $selectedUsers = [];
 
     #[Computed]
@@ -23,6 +23,7 @@ class SkillsMatrix extends Component
     {
         return User::with('skills')
             ->when($this->selectedUsers, fn ($q) => $q->whereIn('id', $this->selectedUsers))
+            ->when($this->selectedSkills, fn ($q) => $q->whereHas('skills', fn ($q) => $q->whereIn('skill_id', $this->selectedSkills)))
             ->orderBy('surname')
             ->orderBy('forenames')
             ->get();
