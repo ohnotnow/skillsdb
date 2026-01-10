@@ -519,4 +519,36 @@ Cleaner history, each issue represents one deliverable.
 
 ---
 
+## 2026-01-10 - API Endpoint & Admin Notifications
+
+### API Endpoint
+
+Added `GET /api/users` endpoint for PowerBI integration:
+- Sanctum-protected at `/api/users`
+- Returns all users with their skills, categories, and proficiency levels
+- Uses `UserResource` and `SkillResource` for clean JSON formatting
+- Response includes both `level` (human-readable) and `level_value` (numeric) for flexibility
+
+Added a dev API token to `TestDataSeeder` - prints to console when seeding so you can test immediately.
+
+### Admin Notifications for Pending Skills
+
+Daily digest email sent to admins at 8:30am listing any pending skills:
+- `app/Mail/PendingSkillsDigest.php` - queued mailable (SMTP can be flaky)
+- `resources/views/emails/pending-skills-digest.blade.php` - markdown template
+- `app/Console/Commands/SendPendingSkillsDigest.php` - finds pending skills, emails admins
+- Scheduled in `routes/console.php` via `Schedule::command()->dailyAt('08:30')`
+
+Design decision: single daily digest rather than real-time notifications. Admins don't need instant alerts for skill suggestions - a morning summary is plenty. Reduces inbox noise.
+
+To test manually: `php artisan skills:send-pending-digest`
+
+### What's Left
+
+Phase 2 nice-to-haves:
+- Skills Coach (LLM-powered career suggestions)
+- Gamification & engagement features
+
+---
+
 *Add new entries above this line*

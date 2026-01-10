@@ -16,6 +16,7 @@ class TestDataSeeder extends Seeder
         $categories = $this->createSkillCategories();
         $skills = $this->createSkills($adminUser, $categories);
         $this->assignSkillsToUsers($adminUser, $standardUser, $skills);
+        $this->createApiToken($adminUser);
     }
 
     private function createUsers(): array
@@ -135,5 +136,15 @@ class TestDataSeeder extends Seeder
             $skills['rust']->id => ['level' => SkillLevel::Low->value],
         ]);
         $standardUser->touchSkillsUpdatedAt();
+    }
+
+    private function createApiToken(User $user): void
+    {
+        $token = $user->createToken('dev-token');
+
+        $this->command->info('');
+        $this->command->info('API Token for '.$user->username.':');
+        $this->command->info($token->plainTextToken);
+        $this->command->info('');
     }
 }
