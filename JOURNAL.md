@@ -306,4 +306,110 @@ This completes Phase 1 core functionality. The matrix report is the last piece b
 
 ---
 
+## 2026-01-10 - Skills Matrix & Filters
+
+### What We Built
+
+Skills Matrix page at `/admin/matrix`:
+- Grid showing users (rows) × skills (columns) with colour-coded proficiency badges
+- Rotated 45° column headers for space efficiency
+- Multi-select filters for both skills and users
+- Filters persist in URL for shareable links
+
+New/modified files:
+- `app/Livewire/Admin/SkillsMatrix.php` - full-page component with filter logic
+- `resources/views/livewire/admin/skills-matrix.blade.php` - CSS Grid layout
+- `tests/Feature/Livewire/Admin/SkillsMatrixTest.php` - 18 tests
+- `routes/web.php` - added `/admin/matrix` route
+- `resources/views/components/layouts/app.blade.php` - sidebar link
+
+### Why CSS Grid Instead of flux:table
+
+Started with `flux:table` but hit issues:
+- Table expanded to full width even with `w-auto` class
+- When filtering to few columns, the Name column stretched awkwardly
+- Flux's table styling overrode our width constraints
+
+Switched to CSS Grid with `inline-grid`:
+```blade
+<div class="inline-grid gap-px" style="grid-template-columns: auto repeat({{ $this->skills->count() }}, 3.5rem);">
+```
+- `inline-grid` only takes up as much width as needed
+- `auto` for name column, fixed `3.5rem` for skill columns
+- Dynamic column count via Blade interpolation in the style attribute
+
+### The Rotated Headers Pattern
+
+For space-efficient column headers:
+```blade
+<div class="h-32 relative">
+    <div class="absolute bottom-2 left-4 origin-bottom-left -rotate-45 whitespace-nowrap text-sm font-medium">
+        {{ $skill->name }}
+    </div>
+</div>
+```
+- `h-32` gives vertical space for the angled text
+- `origin-bottom-left` sets rotation pivot point
+- `left-4` positions text to align with the badge below (took a few iterations!)
+- Parent cell needs `relative` for the absolute positioning
+
+### Filter Behaviour Decision
+
+Initial implementation only filtered columns (skills) - users without the selected skills still appeared as empty rows. This felt wrong.
+
+Changed so skill filter also filters users:
+```php
+->when($this->selectedSkills, fn ($q) => $q->whereHas('skills', fn ($q) => $q->whereIn('skill_id', $this->selectedSkills)))
+```
+Now "filter by Git" means "show people who know Git" - much more intuitive.
+
+### The #[Url] Browser History Gotcha
+
+**Problem**: User selects a filter, then clears it, then hits browser refresh - the old filter reappears!
+
+**Why**: Livewire uses `history.pushState()` by default. Each filter change pushes a new history entry. When you clear the filter, it pushes another entry. But the browser's refresh button sometimes uses a cached history state rather than the current URL.
+
+**Fix**: Use `history: 'replace'` to replace the current entry instead of pushing:
+```php
+#[Url(except: '', history: 'replace')]
+public array $selectedSkills = [];
+```
+
+The `except: ''` removes the query param when empty, and `history: 'replace'` prevents the stale history issue.
+
+### Empty Cells Visual Treatment
+
+Empty cells (user doesn't have this skill) initially showed nothing - conceptually correct but visually odd. Added a subtle zinc badge with a minus icon:
+```blade
+@else
+    <flux:badge size="sm" color="zinc" icon="minus-circle"></flux:badge>
+@endif
+```
+Makes the grid feel complete without drawing attention away from actual skill levels.
+
+### Testing Computed Properties in Livewire
+
+Can't use `->viewData('skills')` for Livewire computed properties - they're not passed as view data. Instead, access the component instance directly:
+```php
+$component = Livewire::actingAs($admin)
+    ->test(SkillsMatrix::class)
+    ->set('selectedSkills', [$docker->id]);
+
+$skills = $component->instance()->skills;
+expect($skills)->toHaveCount(1);
+```
+
+### Don't Fight Flux
+
+Early implementation had lots of manual styling (`bg-zinc-50`, `border-zinc-200`, etc.) on a custom table. This violated the team convention to let Flux handle styling.
+
+Lesson reinforced: only use positioning/layout classes (flex, grid, gap, padding, margin). Let Flux handle colours, borders, typography. When Flux components don't fit, use plain HTML but still avoid colour classes - the grid cells have no visual styling, just layout.
+
+### What's Left
+
+- `skillsdb-74m.4` - Excel export of matrix (last item in the epic)
+- Then Phase 2 begins (gamification, API, etc.)
+
+---
+
 *Add new entries above this line*

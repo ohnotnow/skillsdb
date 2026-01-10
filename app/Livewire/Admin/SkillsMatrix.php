@@ -12,10 +12,10 @@ use Livewire\Component;
 #[Layout('components.layouts.app')]
 class SkillsMatrix extends Component
 {
-    #[Url(except: '')]
+    #[Url(except: '', history: 'replace')]
     public array $selectedSkills = [];
 
-    #[Url(except: '')]
+    #[Url(except: '', history: 'replace')]
     public array $selectedUsers = [];
 
     #[Computed]
