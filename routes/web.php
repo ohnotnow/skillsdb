@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Admin\SkillsManager;
+use App\Livewire\Admin\SkillsMatrix;
 use App\Livewire\Admin\UserSkillsEditor;
 use App\Livewire\Admin\UserSkillsManager;
 use App\Livewire\HomePage;
@@ -15,5 +16,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/skills', SkillsManager::class)->name('skills');
         Route::get('/users', UserSkillsManager::class)->name('users');
         Route::get('/users/{user}', UserSkillsEditor::class)->name('users.skills');
+        Route::get('/matrix', SkillsMatrix::class)->name('matrix');
     });
 });

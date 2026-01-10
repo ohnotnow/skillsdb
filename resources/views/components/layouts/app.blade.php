@@ -28,6 +28,7 @@
                         <flux:separator class="my-2" />
                         <flux:sidebar.item icon="wrench-screwdriver" href="/admin/skills" wire:navigate>Manage Skills</flux:sidebar.item>
                         <flux:sidebar.item icon="users" href="/admin/users" wire:navigate>Manage Users</flux:sidebar.item>
+                        <flux:sidebar.item icon="table-cells" href="/admin/matrix" wire:navigate>Skills Matrix</flux:sidebar.item>
                     @endif
                 </flux:sidebar.nav>
                 <flux:sidebar.spacer />
