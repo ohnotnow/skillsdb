@@ -51,12 +51,12 @@ class SkillsDashboard extends Component
     }
 
     /**
-     * @return array<int, int>
+     * @return array<int, array{month: string, points: int, events: array<string>, eventText: string}>
      */
     #[Computed]
     public function skillsOverTime(): array
     {
-        return $this->user->getSkillsOverTime();
+        return $this->user->getSkillsOverTimeFromHistory();
     }
 
     /**
