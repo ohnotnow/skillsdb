@@ -79,3 +79,95 @@ it('returns null skill level for unassigned skill', function () {
 
     expect($user->getSkillLevel($skill))->toBeNull();
 });
+
+describe('getTrendingSkills', function () {
+    it('returns skills added recently ordered by popularity', function () {
+        $admin = User::factory()->admin()->create();
+        $users = User::factory()->count(5)->create();
+
+        $popularSkill = Skill::factory()->approved($admin)->create(['name' => 'Docker']);
+        $lessPopularSkill = Skill::factory()->approved($admin)->create(['name' => 'Git']);
+        $unpopularSkill = Skill::factory()->approved($admin)->create(['name' => 'COBOL']);
+
+        // 4 users add Docker
+        foreach ($users->take(4) as $user) {
+            $user->skills()->attach($popularSkill, ['level' => SkillLevel::Medium->value]);
+        }
+
+        // 2 users add Git
+        foreach ($users->take(2) as $user) {
+            $user->skills()->attach($lessPopularSkill, ['level' => SkillLevel::Low->value]);
+        }
+
+        // No one adds COBOL
+
+        $trending = Skill::getTrendingSkills();
+
+        expect($trending)->toHaveCount(2);
+        expect($trending->first()->name)->toBe('Docker');
+        expect($trending->first()->recent_additions_count)->toBe(4);
+        expect($trending->last()->name)->toBe('Git');
+        expect($trending->last()->recent_additions_count)->toBe(2);
+    });
+
+    it('excludes skills added outside the time window', function () {
+        $admin = User::factory()->admin()->create();
+        $user = User::factory()->create();
+
+        $recentSkill = Skill::factory()->approved($admin)->create(['name' => 'Recent']);
+        $oldSkill = Skill::factory()->approved($admin)->create(['name' => 'Old']);
+
+        // Add recent skill now
+        $user->skills()->attach($recentSkill, ['level' => SkillLevel::High->value]);
+
+        // Add old skill 60 days ago (outside default 30-day window)
+        $user->skills()->attach($oldSkill, [
+            'level' => SkillLevel::High->value,
+            'created_at' => now()->subDays(60),
+        ]);
+
+        $trending = Skill::getTrendingSkills(days: 30);
+
+        expect($trending)->toHaveCount(1);
+        expect($trending->first()->name)->toBe('Recent');
+    });
+
+    it('respects the limit parameter', function () {
+        $admin = User::factory()->admin()->create();
+        $user = User::factory()->create();
+
+        $skills = Skill::factory()->approved($admin)->count(10)->create();
+        foreach ($skills as $skill) {
+            $user->skills()->attach($skill, ['level' => SkillLevel::Medium->value]);
+        }
+
+        $trending = Skill::getTrendingSkills(limit: 3);
+
+        expect($trending)->toHaveCount(3);
+    });
+
+    it('excludes pending skills', function () {
+        $admin = User::factory()->admin()->create();
+        $user = User::factory()->create();
+
+        $approvedSkill = Skill::factory()->approved($admin)->create();
+        $pendingSkill = Skill::factory()->pending()->create();
+
+        $user->skills()->attach($approvedSkill, ['level' => SkillLevel::High->value]);
+        $user->skills()->attach($pendingSkill, ['level' => SkillLevel::High->value]);
+
+        $trending = Skill::getTrendingSkills();
+
+        expect($trending)->toHaveCount(1);
+        expect($trending->first()->id)->toBe($approvedSkill->id);
+    });
+
+    it('returns empty collection when no skills added recently', function () {
+        $admin = User::factory()->admin()->create();
+        Skill::factory()->approved($admin)->count(3)->create();
+
+        $trending = Skill::getTrendingSkills();
+
+        expect($trending)->toBeEmpty();
+    });
+});

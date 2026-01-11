@@ -23,7 +23,19 @@
     @if ($this->skills->count() > 0)
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             @foreach ($this->skills as $skill)
-                <flux:card wire:key="skill-{{ $skill->id }}">
+                <flux:card
+                    wire:key="skill-{{ $skill->id }}"
+                    x-data="{ levelUp: false, prevLevel: null }"
+                    x-effect="
+                        let level = $wire.userSkillLevels[{{ $skill->id }}];
+                        if (prevLevel !== null && prevLevel !== '3' && (level === '3' || level === 3)) {
+                            levelUp = true;
+                            setTimeout(() => levelUp = false, 700);
+                        }
+                        prevLevel = level;
+                    "
+                    x-bind:class="levelUp && 'animate-level-up'"
+                >
                     <div class="flex flex-col h-full">
                         <div class="mb-3">
                             <div class="flex items-start justify-between gap-2">

@@ -69,4 +69,25 @@ class Skill extends Model
     {
         return $this->approved_at === null;
     }
+
+    /**
+     * Get skills that have been added by users recently, ordered by popularity.
+     *
+     * @param  int  $days  Number of days to look back
+     * @param  int  $limit  Maximum number of skills to return
+     * @return \Illuminate\Database\Eloquent\Collection<int, static>
+     */
+    public static function getTrendingSkills(int $days = 30, int $limit = 5): \Illuminate\Database\Eloquent\Collection
+    {
+        return static::query()
+            ->approved()
+            ->withCount(['users as recent_additions_count' => function ($query) use ($days) {
+                $query->where('skill_user.created_at', '>=', now()->subDays($days));
+            }])
+            ->get()
+            ->filter(fn ($skill) => $skill->recent_additions_count > 0)
+            ->sortByDesc('recent_additions_count')
+            ->take($limit)
+            ->values();
+    }
 }

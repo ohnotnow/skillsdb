@@ -5,3 +5,28 @@
 
 @layer base {  button:not(:disabled),  [role="button"]:not(:disabled) {    cursor: pointer;  }}
 
+/* Level-up animation for selecting "High" skill level */
+/* Uses official Sky Blue: R0 G83 B152 (PMS 2144) */
+@keyframes level-up {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(0, 83, 152, 0.7);
+    }
+    30% {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 8px rgba(0, 83, 152, 0.4);
+    }
+    60% {
+        transform: scale(1.01);
+        box-shadow: 0 0 0 12px rgba(0, 83, 152, 0.1);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(0, 83, 152, 0);
+    }
+}
+
+.animate-level-up {
+    animation: level-up 0.6s ease-out;
+}
+

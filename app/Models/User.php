@@ -81,4 +81,54 @@ class User extends Authenticatable
 
         return $pivot ? SkillLevel::from($pivot->level) : null;
     }
+
+    /**
+     * Get counts of skills at each level.
+     *
+     * @return array{low: int, medium: int, high: int, total: int}
+     */
+    public function getSkillDistribution(): array
+    {
+        $counts = $this->skills()
+            ->selectRaw('level, count(*) as count')
+            ->groupBy('level')
+            ->pluck('count', 'level')
+            ->toArray();
+
+        return [
+            'low' => $counts[SkillLevel::Low->value] ?? 0,
+            'medium' => $counts[SkillLevel::Medium->value] ?? 0,
+            'high' => $counts[SkillLevel::High->value] ?? 0,
+            'total' => array_sum($counts),
+        ];
+    }
+
+    /**
+     * Check if skills haven't been updated in over 4 weeks.
+     */
+    public function hasStaleSkills(): bool
+    {
+        if (! $this->last_updated_skills_at) {
+            return true;
+        }
+
+        return $this->last_updated_skills_at->lt(now()->subWeeks(4));
+    }
+
+    /**
+     * Get human-readable text for when skills were last updated.
+     * Returns italic "ages ago" if stale (>4 weeks).
+     */
+    public function getLastUpdatedText(): string
+    {
+        if (! $this->last_updated_skills_at) {
+            return '<em>never</em>';
+        }
+
+        if ($this->hasStaleSkills()) {
+            return '<em>ages ago</em>';
+        }
+
+        return $this->last_updated_skills_at->diffForHumans();
+    }
 }
