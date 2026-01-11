@@ -22,7 +22,7 @@ class SkillUserObserver
 
     public function updated(SkillUser $skillUser): void
     {
-        if (! $skillUser->wasChanged('level')) {
+        if ($skillUser->isClean('level')) {
             return;
         }
 
