@@ -551,4 +551,74 @@ Phase 2 nice-to-haves:
 
 ---
 
+## 2026-01-11 - Gamification Foundation Work
+
+### What We Built
+
+Started the Gamification & Engagement epic with three foundational pieces:
+
+**Level-up Animation**
+- CSS animation triggers when a user selects "High" skill level
+- Uses Alpine.js `x-effect` to detect when level *changes* to High (not on page load)
+- Subtle scale + glow effect using official Sky Blue brand colour (R0 G83 B152)
+- Animation defined in `resources/css/app.css`, triggered via `animate-level-up` class
+
+**User Model Skill Stats Methods**
+- `getSkillDistribution()` - returns `['low' => x, 'medium' => y, 'high' => z, 'total' => n]`
+- `hasStaleSkills()` - true if not updated in >4 weeks (or never)
+- `getLastUpdatedText()` - human-readable text, with `<em>never</em>` or `<em>ages ago</em>` for stale users
+
+**Skill Model Trending Query**
+- `Skill::getTrendingSkills(days: 30, limit: 5)` - returns skills recently added by users
+- Each skill includes `recent_additions_count` attribute
+- Useful for "Docker was added by 6 people this month" type insights
+
+### Technical Notes
+
+**SQLite HAVING Clause Limitation**
+The initial `getTrendingSkills()` implementation used `->having('recent_additions_count', '>', 0)` which works in MySQL but fails in SQLite (used for tests). SQLite complains about HAVING on non-aggregate queries when using subquery counts via `withCount()`.
+
+Fix: Filter in PHP after fetching:
+```php
+->get()
+->filter(fn ($skill) => $skill->recent_additions_count > 0)
+->sortByDesc('recent_additions_count')
+->take($limit)
+->values();
+```
+
+Not a performance concern for our small dataset.
+
+**Alpine x-effect for Animation Triggers**
+To only animate on *change* (not initial load), track previous value:
+```blade
+x-data="{ levelUp: false, prevLevel: null }"
+x-effect="
+    let level = $wire.userSkillLevels[{{ $skill->id }}];
+    if (prevLevel !== null && prevLevel !== '3' && (level === '3' || level === 3)) {
+        levelUp = true;
+        setTimeout(() => levelUp = false, 700);
+    }
+    prevLevel = level;
+"
+```
+
+### Design Decisions
+
+**Dashboard Chart Strategy**
+Discussed what charts to show and agreed on keeping it simple:
+- User home page: personal skill count over time (sparkline)
+- Admin view: team total over time + "hot skills this month"
+- Deep analysis: leave for Excel export or PowerBI via API
+
+Build simple first, let real usage guide what's worth investing in later.
+
+### What's Next
+
+- `skillsdb-ad6.3` - SkillsDashboard component (uses the foundation we just built)
+- Then embed on home page and admin matrix
+- Sparkline charts using Flux's `flux:chart` component
+
+---
+
 *Add new entries above this line*
