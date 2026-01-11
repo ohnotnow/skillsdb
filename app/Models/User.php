@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SkillHistoryEvent;
 use App\Enums\SkillLevel;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -144,6 +145,9 @@ class User extends Authenticatable
      * Returns an array of associative arrays with month label and points.
      * Points are calculated as: Low=1, Medium=2, High=3.
      *
+     * NOTE: This method is inaccurate - it projects current levels backwards.
+     * Use getSkillsOverTimeFromHistory() for accurate historical data.
+     *
      * @return array<int, array{month: string, points: int}>
      */
     public function getSkillsOverTime(int $months = 6): array
@@ -158,6 +162,45 @@ class User extends Authenticatable
                 'points' => (int) $this->skills()
                     ->wherePivot('created_at', '<=', $endOfMonth)
                     ->sum('skill_user.level'),
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Get accurate cumulative skill points for each of the last N months.
+     * Uses SkillHistory to replay events and calculate actual points at each point in time.
+     * Points are calculated as: Low=1, Medium=2, High=3.
+     *
+     * @return array<int, array{month: string, points: int}>
+     */
+    public function getSkillsOverTimeFromHistory(int $months = 6): array
+    {
+        $data = [];
+        $history = $this->skillHistory()
+            ->reorder()  // Clear the default latest('id') ordering
+            ->orderBy('created_at')
+            ->get()
+            ->groupBy('skill_id');
+
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $endOfMonth = now()->subMonths($i)->endOfMonth();
+            $points = 0;
+
+            foreach ($history as $events) {
+                $latestEvent = $events
+                    ->where('created_at', '<=', $endOfMonth)
+                    ->last();
+
+                if ($latestEvent && $latestEvent->event_type !== SkillHistoryEvent::Removed) {
+                    $points += $latestEvent->new_level ?? 0;
+                }
+            }
+
+            $data[] = [
+                'month' => $endOfMonth->format('M'),
+                'points' => $points,
             ];
         }
 
