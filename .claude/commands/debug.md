@@ -60,7 +60,7 @@ mcp__laravel-telescope__mail        # Email issues
 ## Debug Report
 
 **Error:** [Exception] - [message]
-**Location:** [file:line]
+**Location:** file:line
 
 ### Root Cause
 [What's failing]
