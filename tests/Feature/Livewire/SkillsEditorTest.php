@@ -84,7 +84,7 @@ it('can update skill level', function () {
         ->call('updateSkillLevel', $skill->id, SkillLevel::High->value);
 
     expect($user->fresh()->skills)->toHaveCount(1);
-    expect($user->skills->first()->pivot->level)->toBe(SkillLevel::High->value);
+    expect($user->fresh()->skills->first()->pivot->level)->toBe(SkillLevel::High);
     expect($user->fresh()->last_updated_skills_at)->not->toBeNull();
 });
 

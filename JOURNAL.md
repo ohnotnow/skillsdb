@@ -621,4 +621,155 @@ Build simple first, let real usage guide what's worth investing in later.
 
 ---
 
+## 2026-01-11 - Skill History Tracking
+
+### The Vision
+
+Record every skill journey event - when skills were added, removed, or levelled up/down. This unlocks:
+- Timeline/activity feed views
+- Calendar visualizations
+- Richer chart data based on actual events (not inferred from current state)
+- Admin insights ("5 people levelled up this week")
+- Celebratory messaging ("You reached High in Laravel on Dec 5th!")
+
+The spec was written up in `SKILL_HISTORY.md` before implementation - worth reading if you need the full picture.
+
+### What We Built
+
+| Component | Purpose |
+|-----------|---------|
+| `SkillHistoryEvent` enum | Added, Removed, LevelledUp, LevelledDown - with label/icon/colour methods |
+| `SkillHistory` model | The history record - links user, skill, event type, old/new levels, timestamp |
+| `SkillUser` pivot model | Custom pivot for `skill_user` table - this is the magic bit |
+| `SkillUserObserver` | Watches the pivot and auto-records history on created/updated/deleted |
+
+The observer is registered via the `#[ObservedBy]` attribute on `SkillUser` - no manual registration needed.
+
+### The Custom Pivot Model Pattern
+
+This is the key architectural decision. Instead of the default anonymous pivot:
+
+```php
+// Before
+return $this->belongsToMany(Skill::class)
+    ->withPivot('level')
+    ->withTimestamps();
+
+// After
+return $this->belongsToMany(Skill::class)
+    ->using(SkillUser::class)  // <-- Custom pivot model
+    ->withPivot('level')
+    ->withTimestamps();
+```
+
+The `SkillUser` model extends `Pivot` (not `Model`) and has:
+- `$incrementing = true` (pivots don't auto-increment by default)
+- Cast for `level` to `SkillLevel` enum
+- The `#[ObservedBy(SkillUserObserver::class)]` attribute
+
+Now every `attach()`, `detach()`, and `updateExistingPivot()` fires observer events automatically. No changes needed to existing code that manipulates skills!
+
+### Observer Gotchas
+
+**The enum cast comparison issue**
+
+First attempt at detecting level changes:
+```php
+$oldLevel = $skillUser->getOriginal('level');
+$newLevel = $skillUser->level->value;
+// Compare $newLevel > $oldLevel
+```
+
+Problem: `getOriginal()` returns the cast value (a `SkillLevel` enum), not the raw integer. Comparing an int to an enum gave wrong results.
+
+Fix:
+```php
+$original = $skillUser->getOriginal('level');
+$oldLevel = $original instanceof SkillLevel ? $original->value : (int) $original;
+```
+
+**History timestamps**
+
+The `SkillHistory` model only has `created_at` (no `updated_at` - history records are immutable). We use `$timestamps = false` and set `created_at` in the `booted()` method:
+
+```php
+protected static function booted(): void
+{
+    static::creating(function (SkillHistory $history) {
+        $history->created_at ??= now();
+    });
+}
+```
+
+The `??=` allows manual timestamp override (useful for seeding historical data).
+
+### Breaking Change: Pivot Level is Now an Enum
+
+Adding the `SkillUser` pivot model with a `level` cast means `$pivot->level` returns a `SkillLevel` enum, not an integer.
+
+Had to update:
+- `User::getSkillLevel()` - was calling `SkillLevel::from($pivot->level)`, now just returns `$pivot->level`
+- `SkillResource` - same issue
+- Several tests that expected `->toBe(3)` now need `->toBe(SkillLevel::High)`
+
+If you're writing new code that touches `$pivot->level`, remember it's an enum!
+
+### The Play Space
+
+Created a quick "play space" at `/play` for experimenting with the new feature:
+- `app/Livewire/PlaySpace.php` - dead simple component
+- `resources/views/livewire/play-space.blade.php` - flux:table of all history
+- Link in admin sidebar with a play icon
+
+Title has an emoji (🎮) because sometimes you need a bit of joy. This is explicitly a throwaway page for experimenting - feel free to gut it and rebuild for whatever you're testing next.
+
+### Seeder Behaviour
+
+The `TestDataSeeder` already attaches skills at various timestamps and updates levels. With the observer now in place, history gets recorded automatically when seeding.
+
+Note: The history `created_at` timestamps will be "now" (when you run the seeder), not the historical dates from `attachSkillAtTime()`. This is fine for testing - the structure is there, and in production the history will track real events.
+
+### Testing Coverage
+
+`tests/Feature/Models/SkillHistoryTest.php` covers:
+- History recorded on skill add
+- History recorded on level increase (LevelledUp)
+- History recorded on level decrease (LevelledDown)
+- History recorded on skill removal
+- No history when level stays the same
+- Bulk operations record individual events
+- Model relationships work correctly
+- User's `skillHistory` relationship returns events in order
+
+### What This Enables (Future)
+
+Now that we're recording events, we can build:
+- **Timeline view** - Show a user's skill journey chronologically
+- **Calendar heatmap** - GitHub-style activity visualization
+- **Better charts** - Plot actual events, not just current state
+- **Admin dashboard** - "5 people levelled up this week", "Docker is trending"
+- **Achievements** - "First skill!", "10 skills milestone", "Levelled up 3 times this month"
+- **Notifications** - "Congratulations on reaching High in PHP!"
+
+The foundation is in place. Build what users actually want, not everything we *could* build.
+
+### Files Reference
+
+New:
+- `app/Enums/SkillHistoryEvent.php`
+- `app/Models/SkillHistory.php`
+- `app/Models/SkillUser.php`
+- `app/Observers/SkillUserObserver.php`
+- `database/migrations/*_create_skill_histories_table.php`
+- `database/factories/SkillHistoryFactory.php`
+- `tests/Feature/Models/SkillHistoryTest.php`
+- `app/Livewire/PlaySpace.php` (+ view)
+
+Modified:
+- `app/Models/User.php` - added `using(SkillUser::class)` + `skillHistory()` relationship
+- `app/Models/Skill.php` - added `using(SkillUser::class)`
+- `app/Http/Resources/SkillResource.php` - removed redundant `SkillLevel::from()` call
+
+---
+
 *Add new entries above this line*

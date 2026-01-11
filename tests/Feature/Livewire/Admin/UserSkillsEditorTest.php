@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\SkillLevel;
 use App\Livewire\Admin\UserSkillsEditor;
 use App\Livewire\SkillsEditor;
 use App\Models\Skill;
@@ -101,20 +102,20 @@ it('can assign a skill to the user', function () {
         ->call('updateSkillLevel', $skill->id, '2');
 
     expect($user->fresh()->skills)->toHaveCount(1);
-    expect($user->fresh()->skills->first()->pivot->level)->toBe(2);
+    expect($user->fresh()->skills->first()->pivot->level)->toBe(SkillLevel::Medium);
 });
 
 it('can update a users skill level', function () {
     $admin = User::factory()->admin()->create();
     $user = User::factory()->create();
     $skill = Skill::factory()->approved()->create();
-    $user->skills()->attach($skill->id, ['level' => 1]);
+    $user->skills()->attach($skill->id, ['level' => SkillLevel::Low->value]);
 
     Livewire::actingAs($admin)
         ->test(SkillsEditor::class, ['userId' => $user->id])
         ->call('updateSkillLevel', $skill->id, '3');
 
-    expect($user->fresh()->skills->first()->pivot->level)->toBe(3);
+    expect($user->fresh()->skills->first()->pivot->level)->toBe(SkillLevel::High);
 });
 
 it('can remove a skill from a user', function () {
@@ -161,4 +162,3 @@ it('shows their instead of my in filter label for admin context', function () {
         ->test(SkillsEditor::class, ['userId' => $user->id])
         ->assertSee('Show only their skills');
 });
-

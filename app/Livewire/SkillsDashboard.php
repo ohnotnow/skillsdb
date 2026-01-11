@@ -51,6 +51,15 @@ class SkillsDashboard extends Component
     }
 
     /**
+     * @return array<int, int>
+     */
+    #[Computed]
+    public function skillsOverTime(): array
+    {
+        return $this->user->getSkillsOverTime();
+    }
+
+    /**
      * Get 3 random skills the user has, with colleagues who share them.
      *
      * @return \Illuminate\Support\Collection<int, array{skill: Skill, colleagues: \Illuminate\Support\Collection<int, User>}>

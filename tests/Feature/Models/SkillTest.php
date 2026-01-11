@@ -50,7 +50,7 @@ it('can attach skills to a user with a level', function () {
     $user->skills()->attach($skill->id, ['level' => SkillLevel::High->value]);
 
     expect($user->skills)->toHaveCount(1);
-    expect($user->skills->first()->pivot->level)->toBe(SkillLevel::High->value);
+    expect($user->skills->first()->pivot->level)->toBe(SkillLevel::High);
 });
 
 it('can get the skill level for a user', function () {
