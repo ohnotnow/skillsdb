@@ -116,42 +116,53 @@ class TestDataSeeder extends Seeder
 
     private function assignSkillsToUsers(User $adminUser, User $standardUser, array $skills): void
     {
-        // Admin user skills - spread over 6 months for realistic sparkline data
-        $this->attachSkillAtTime($adminUser, $skills['git'], SkillLevel::Medium, now()->subMonths(5));
-        $this->attachSkillAtTime($adminUser, $skills['php'], SkillLevel::Medium, now()->subMonths(4));
-        $this->attachSkillAtTime($adminUser, $skills['mysql'], SkillLevel::Low, now()->subMonths(3));
-        $this->attachSkillAtTime($adminUser, $skills['javascript'], SkillLevel::Low, now()->subMonths(2));
-        $this->attachSkillAtTime($adminUser, $skills['laravel'], SkillLevel::Medium, now()->subMonths(1));
-        $this->attachSkillAtTime($adminUser, $skills['docker'], SkillLevel::Medium, now()->subDays(5));
+        $realNow = now();
 
-        // Update levels to show progression (simulates levelling up)
-        $adminUser->skills()->updateExistingPivot($skills['git']->id, ['level' => SkillLevel::High->value]);
-        $adminUser->skills()->updateExistingPivot($skills['php']->id, ['level' => SkillLevel::High->value]);
-        $adminUser->skills()->updateExistingPivot($skills['laravel']->id, ['level' => SkillLevel::High->value]);
+        // Admin user skills - spread over 6 months for realistic sparkline data
+        $this->attachSkillAtTime($adminUser, $skills['git'], SkillLevel::Medium, $realNow->copy()->subMonths(5));
+        $this->attachSkillAtTime($adminUser, $skills['php'], SkillLevel::Medium, $realNow->copy()->subMonths(4));
+        $this->attachSkillAtTime($adminUser, $skills['mysql'], SkillLevel::Low, $realNow->copy()->subMonths(3));
+        $this->attachSkillAtTime($adminUser, $skills['javascript'], SkillLevel::Low, $realNow->copy()->subMonths(2));
+        $this->attachSkillAtTime($adminUser, $skills['laravel'], SkillLevel::Medium, $realNow->copy()->subMonths(1));
+        $this->attachSkillAtTime($adminUser, $skills['docker'], SkillLevel::Medium, $realNow->copy()->subDays(5));
+
+        // Update levels to show progression (simulates levelling up over time)
+        $this->updateSkillAtTime($adminUser, $skills['git'], SkillLevel::High, $realNow->copy()->subMonths(3));
+        $this->updateSkillAtTime($adminUser, $skills['php'], SkillLevel::High, $realNow->copy()->subMonths(2));
+        $this->updateSkillAtTime($adminUser, $skills['laravel'], SkillLevel::High, $realNow->copy()->subWeeks(2));
 
         $adminUser->touchSkillsUpdatedAt();
 
         // Standard user skills (including the pending skill they suggested)
-        $this->attachSkillAtTime($standardUser, $skills['git'], SkillLevel::Low, now()->subMonths(4));
-        $this->attachSkillAtTime($standardUser, $skills['php'], SkillLevel::Low, now()->subMonths(3));
-        $this->attachSkillAtTime($standardUser, $skills['python'], SkillLevel::Medium, now()->subMonths(2));
-        $this->attachSkillAtTime($standardUser, $skills['laravel'], SkillLevel::Low, now()->subMonths(1));
-        $this->attachSkillAtTime($standardUser, $skills['rust'], SkillLevel::Low, now()->subDays(10));
+        $this->attachSkillAtTime($standardUser, $skills['git'], SkillLevel::Low, $realNow->copy()->subMonths(4));
+        $this->attachSkillAtTime($standardUser, $skills['php'], SkillLevel::Low, $realNow->copy()->subMonths(3));
+        $this->attachSkillAtTime($standardUser, $skills['python'], SkillLevel::Medium, $realNow->copy()->subMonths(2));
+        $this->attachSkillAtTime($standardUser, $skills['laravel'], SkillLevel::Low, $realNow->copy()->subMonths(1));
+        $this->attachSkillAtTime($standardUser, $skills['rust'], SkillLevel::Low, $realNow->copy()->subDays(10));
 
-        // Update levels
-        $standardUser->skills()->updateExistingPivot($skills['git']->id, ['level' => SkillLevel::Medium->value]);
-        $standardUser->skills()->updateExistingPivot($skills['python']->id, ['level' => SkillLevel::High->value]);
+        // Update levels over time
+        $this->updateSkillAtTime($standardUser, $skills['git'], SkillLevel::Medium, $realNow->copy()->subMonths(2));
+        $this->updateSkillAtTime($standardUser, $skills['python'], SkillLevel::High, $realNow->copy()->subWeeks(3));
 
         $standardUser->touchSkillsUpdatedAt();
     }
 
+    private function updateSkillAtTime(User $user, Skill $skill, SkillLevel $level, $timestamp): void
+    {
+        \Illuminate\Support\Carbon::setTestNow($timestamp);
+        $user->skills()->updateExistingPivot($skill->id, ['level' => $level->value]);
+        \Illuminate\Support\Carbon::setTestNow();
+    }
+
     private function attachSkillAtTime(User $user, Skill $skill, SkillLevel $level, $timestamp): void
     {
+        \Illuminate\Support\Carbon::setTestNow($timestamp);
         $user->skills()->attach($skill->id, [
             'level' => $level->value,
             'created_at' => $timestamp,
             'updated_at' => $timestamp,
         ]);
+        \Illuminate\Support\Carbon::setTestNow();
     }
 
     private function createApiToken(User $user): void

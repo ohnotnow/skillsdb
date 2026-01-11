@@ -79,7 +79,7 @@
 
                     <flux:chart.tooltip>
                         <flux:chart.tooltip.heading field="month" />
-                        <flux:chart.tooltip.value field="points" label="Points" />
+                        <flux:chart.tooltip.value field="eventText" label="Activity" />
                     </flux:chart.tooltip>
                 </flux:chart>
             @else

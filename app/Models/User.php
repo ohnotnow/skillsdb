@@ -173,22 +173,27 @@ class User extends Authenticatable
      * Uses SkillHistory to replay events and calculate actual points at each point in time.
      * Points are calculated as: Low=1, Medium=2, High=3.
      *
-     * @return array<int, array{month: string, points: int}>
+     * @return array<int, array{month: string, points: int, events: array<string>}>
      */
     public function getSkillsOverTimeFromHistory(int $months = 6): array
     {
         $data = [];
         $history = $this->skillHistory()
-            ->reorder()  // Clear the default latest('id') ordering
+            ->reorder()
             ->orderBy('created_at')
-            ->get()
-            ->groupBy('skill_id');
+            ->with('skill')
+            ->get();
+
+        $historyBySkill = $history->groupBy('skill_id');
 
         for ($i = $months - 1; $i >= 0; $i--) {
             $endOfMonth = now()->subMonths($i)->endOfMonth();
+            $startOfMonth = now()->subMonths($i)->startOfMonth();
             $points = 0;
+            $eventDescriptions = [];
 
-            foreach ($history as $events) {
+            foreach ($historyBySkill as $events) {
+                // Calculate points: find latest event before end of month
                 $latestEvent = $events
                     ->where('created_at', '<=', $endOfMonth)
                     ->last();
@@ -196,11 +201,22 @@ class User extends Authenticatable
                 if ($latestEvent && $latestEvent->event_type !== SkillHistoryEvent::Removed) {
                     $points += $latestEvent->new_level ?? 0;
                 }
+
+                // Collect event descriptions for THIS month
+                $monthEvents = $events->filter(
+                    fn ($e) => $e->created_at >= $startOfMonth && $e->created_at <= $endOfMonth
+                );
+
+                foreach ($monthEvents as $event) {
+                    $eventDescriptions[] = $event->skill->name.' - '.$event->event_type->label();
+                }
             }
 
             $data[] = [
                 'month' => $endOfMonth->format('M'),
                 'points' => $points,
+                'events' => $eventDescriptions,
+                'eventText' => empty($eventDescriptions) ? 'No changes' : implode(', ', $eventDescriptions),
             ];
         }
 
