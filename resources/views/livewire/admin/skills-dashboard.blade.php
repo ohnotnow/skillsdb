@@ -225,12 +225,12 @@
         {{-- Matrix Tab --}}
         <flux:tab.panel name="matrix" class="pt-6">
             <div class="mb-4 flex items-center justify-between">
-                <flux:text>The full skills matrix with time-travel and export features.</flux:text>
+                <flux:text>Compact overview. Hover for details.</flux:text>
                 <flux:button href="{{ route('admin.matrix') }}" icon="arrow-top-right-on-square" variant="ghost">
                     Open Full Matrix
                 </flux:button>
             </div>
-            <livewire:admin.skills-matrix />
+            <livewire:admin.compact-matrix />
         </flux:tab.panel>
     </flux:tab.group>
 </div>
