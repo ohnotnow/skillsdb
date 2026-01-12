@@ -772,4 +772,86 @@ Modified:
 
 ---
 
+## 2026-01-12 - Skills Matrix Improvements & Time Travel
+
+### What We Built
+
+**Matrix Visual Refresh**
+- Replaced badges in matrix cells with background colours
+- Added `bgClass()` method to `SkillLevel` enum for consistent Tailwind classes
+- Much cleaner heat-map style appearance
+- Legend updated to match (coloured squares instead of badges)
+
+**Time Travel Feature**
+- Admins can now slide through time to see how the skills matrix looked historically
+- Uses `flux:slider` bound to a timeline position
+- Leverages the existing `SkillHistory` data to reconstruct past states
+- Added `User::getSkillLevelAt(Skill $skill, Carbon $date)` method
+
+New/modified files:
+- `app/Enums/SkillLevel.php` - added `bgClass()` method
+- `app/Models/User.php` - added `getSkillLevelAt()` method
+- `app/Livewire/Admin/SkillsMatrix.php` - timeline properties and computed methods
+- `resources/views/livewire/admin/skills-matrix.blade.php` - slider UI and cell colours
+
+### Lessons in Simplicity
+
+This session was a masterclass in "keep it simple" - with the user repeatedly (and patiently!) pushing back on over-engineering.
+
+**The `maxDaysAgo` saga**
+
+First attempt was complex - querying for earliest date, calculating days, handling edge cases with separate methods. User's response: "Why is this complex? What about just `SkillHistory::first()?->created_at ?? now()`?"
+
+Even simpler: if there's no history, default to `now()` not some arbitrary "6 months ago". No history = nothing to time travel through. Logic follows reality.
+
+**The conditional that wasn't needed**
+
+Added `if ($this->isViewingPast)` to switch between `getSkillLevel()` and `getSkillLevelAt()`. User asked: "Why not just always use `getSkillLevelAt($date)`?" If the date is today, it returns today's level. No conditional needed.
+
+**When boost search doesn't find something**
+
+User mentioned `flux:slider`. I searched the docs, didn't find it, and silently switched to planning a native HTML range input. Should have said: "I couldn't find flux:slider in the docs - can you tell me about it?"
+
+The component absolutely exists. The user had the docs open. Lesson: don't assume search results are authoritative. When someone mentions something specific, ask about it rather than assuming they're wrong.
+
+**Carbon's diffInDays sign change**
+
+Carbon changed `diffInDays()` from returning absolute values to signed values. `now()->diffInDays($pastDate)` returns negative. Spent time debugging with `dump()` output before spotting `-153` instead of `153`. User confessed they spotted this immediately but let me find it - a fair "old-time developer test"!
+
+### Unfinished Business: Method Calls in Blade
+
+The current blade template has:
+```blade
+{{ $user->getSkillLevelAt($skill, $this->viewingDate)?->bgClass() ?? '...' }}
+```
+
+User asked me to remind them about this pattern. It works, but it's method calls with parameters in the view. Options to consider:
+1. Move to a component method: `$this->getCellBgClass($user, $skill)`
+2. Pre-compute in the component and pass as data
+3. Leave it - it's readable and the logic is simple
+
+Worth discussing whether this violates the "no hidden code in templates" principle or whether it's acceptable because it's just a method call, not actual logic.
+
+### Technical Notes
+
+**Slider direction matters for UX**
+- Timeline should read left-to-right: past → present
+- Initial implementation had it backwards (0 = today on left)
+- Fixed by changing mental model: `timelinePosition` = days from earliest date
+- `viewingDate = earliestDate->addDays(position)`
+- Default to `timelineMax` in `mount()` so slider starts at "now" (right side)
+
+**Livewire slider binding with null**
+- Can't default a property to a computed value
+- `public ?int $timelinePosition = null` with `?? $this->timelineMax` in PHP doesn't help - slider sees null and picks middle
+- Solution: initialise in `mount()` method
+
+### The Meta-Lesson
+
+Every piece of unnecessary complexity has a cost - in reading, testing, debugging, and future changes. The user's team convention of "simplicity is the ultimate sophistication" isn't just a nice quote - it's a working practice. When asked "why is this complex?", the answer should never be "because it might need to handle X someday."
+
+Build for today. Refactor when (if!) tomorrow's requirements actually arrive.
+
+---
+
 *Add new entries above this line*
