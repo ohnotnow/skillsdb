@@ -1,7 +1,18 @@
 <div>
     @if ($this->users->count() > 0 && $this->skills->count() > 0)
+        {{-- Time slider --}}
+        <flux:field class="mb-4">
+            <flux:label class="text-sm">
+                Time travel
+                <x-slot name="trailing">
+                    <span class="tabular-nums font-medium">{{ $this->viewingDate->format('j M Y') }}</span>
+                </x-slot>
+            </flux:label>
+            <flux:slider wire:model.live="timelinePosition" min="0" max="{{ $this->timelineMax }}" />
+        </flux:field>
+
         <div class="overflow-x-auto">
-            <div class="inline-grid gap-px bg-zinc-200 dark:bg-zinc-700" style="grid-template-columns: auto repeat({{ $this->skills->count() }}, 1.75rem);">
+            <div wire:transition class="inline-grid gap-px bg-zinc-200 dark:bg-zinc-700" style="grid-template-columns: auto repeat({{ $this->skills->count() }}, 1.75rem);">
                 {{-- Header row --}}
                 <div class="bg-zinc-50 dark:bg-zinc-800 p-1"></div>
                 @foreach ($this->skills as $skill)

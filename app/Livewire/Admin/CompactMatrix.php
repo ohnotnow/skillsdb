@@ -3,16 +3,45 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Skill;
+use App\Models\SkillHistory;
 use App\Models\User;
+use Carbon\Carbon;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class CompactMatrix extends Component
 {
+    public int $timelinePosition = 0;
+
+    public function mount(): void
+    {
+        $this->timelinePosition = $this->timelineMax;
+    }
+
+    #[Computed]
+    public function earliestDate(): Carbon
+    {
+        return SkillHistory::orderBy('created_at')->first()?->created_at ?? now();
+    }
+
+    #[Computed]
+    public function timelineMax(): int
+    {
+        return (int) $this->earliestDate->diffInDays(now());
+    }
+
+    #[Computed]
+    public function viewingDate(): Carbon
+    {
+        return $this->earliestDate->copy()->addDays($this->timelinePosition);
+    }
+
     #[Computed]
     public function users()
     {
-        return User::with('skills')
+        $viewingDate = $this->viewingDate;
+
+        return User::query()
             ->orderBy('surname')
             ->orderBy('forenames')
             ->get()
@@ -20,10 +49,38 @@ class CompactMatrix extends Component
                 'id' => $user->id,
                 'initials' => $this->getInitials($user->forenames, $user->surname),
                 'fullName' => $user->full_name,
-                'skills' => $user->skills->mapWithKeys(fn ($skill) => [
-                    $skill->id => $skill->pivot->level?->value,
-                ])->toArray(),
+                'skills' => $this->getUserSkillsAt($user, $viewingDate),
             ]);
+    }
+
+    private function getUserSkillsAt(User $user, Carbon $date): array
+    {
+        $skills = Skill::approved()->pluck('id');
+        $result = [];
+
+        foreach ($skills as $skillId) {
+            $level = $this->getSkillLevelAt($user->id, $skillId, $date);
+            if ($level !== null) {
+                $result[$skillId] = $level;
+            }
+        }
+
+        return $result;
+    }
+
+    private function getSkillLevelAt(int $userId, int $skillId, Carbon $date): ?int
+    {
+        $latestEvent = SkillHistory::where('user_id', $userId)
+            ->where('skill_id', $skillId)
+            ->where('created_at', '<=', $date)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (! $latestEvent || $latestEvent->event_type === \App\Enums\SkillHistoryEvent::Removed) {
+            return null;
+        }
+
+        return $latestEvent->new_level;
     }
 
     #[Computed]
