@@ -22,13 +22,6 @@
         </div>
     </div>
 
-    <div class="mb-4 p-4 bg-yellow-100 text-sm">
-        <p>earliestDate: {{ $this->earliestDate }}</p>
-        <p>timelineMax: {{ $this->timelineMax }}</p>
-        <p>timelinePosition: {{ $this->timelinePosition ?? 'null' }}</p>
-        <p>viewingDate: {{ $this->viewingDate }}</p>
-    </div>
-
     <flux:field class="mb-6">
         <flux:label>
             Time travel

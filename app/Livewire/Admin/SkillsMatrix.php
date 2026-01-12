@@ -22,7 +22,12 @@ class SkillsMatrix extends Component
     #[Url(except: '', history: 'replace')]
     public array $selectedUsers = [];
 
-    public ?int $timelinePosition = null;
+    public int $timelinePosition = 0;
+
+    public function mount(): void
+    {
+        $this->timelinePosition = $this->timelineMax;
+    }
 
     #[Computed]
     public function earliestDate(): Carbon
@@ -39,9 +44,7 @@ class SkillsMatrix extends Component
     #[Computed]
     public function viewingDate(): Carbon
     {
-        $position = $this->timelinePosition ?? $this->timelineMax;
-
-        return $this->earliestDate->copy()->addDays($position);
+        return $this->earliestDate->copy()->addDays($this->timelinePosition);
     }
 
     #[Computed]
