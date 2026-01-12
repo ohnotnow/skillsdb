@@ -28,7 +28,7 @@
                         <flux:separator class="my-2" />
                         <flux:sidebar.item icon="wrench-screwdriver" href="/admin/skills" wire:navigate>Manage Skills</flux:sidebar.item>
                         <flux:sidebar.item icon="users" href="/admin/users" wire:navigate>Manage Users</flux:sidebar.item>
-                        <flux:sidebar.item icon="table-cells" href="/admin/matrix" wire:navigate>Skills Matrix</flux:sidebar.item>
+                        <flux:sidebar.item icon="chart-bar" href="/admin/dashboard" wire:navigate>Skills Dashboard</flux:sidebar.item>
                         <flux:sidebar.item icon="key" href="/admin/api-tokens" wire:navigate>API Tokens</flux:sidebar.item>
                         <flux:sidebar.item icon="play" href="/play" wire:navigate>Play Space</flux:sidebar.item>
                     @endif

@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Admin\ApiTokensManager;
+use App\Livewire\Admin\SkillsDashboard;
 use App\Livewire\Admin\SkillsManager;
 use App\Livewire\Admin\SkillsMatrix;
 use App\Livewire\Admin\UserSkillsEditor;
@@ -20,6 +21,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/users', UserSkillsManager::class)->name('users');
         Route::get('/users/{user}', UserSkillsEditor::class)->name('users.skills');
         Route::get('/matrix', SkillsMatrix::class)->name('matrix');
+        Route::get('/dashboard', SkillsDashboard::class)->name('dashboard');
         Route::get('/api-tokens', ApiTokensManager::class)->name('api-tokens');
     });
 });
