@@ -3,7 +3,9 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Skill;
+use App\Models\SkillHistory;
 use App\Models\User;
+use Carbon\Carbon;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -19,6 +21,26 @@ class SkillsMatrix extends Component
 
     #[Url(except: '', history: 'replace')]
     public array $selectedUsers = [];
+
+    public int $daysAgo = 0;
+
+    #[Computed]
+    public function earliestDate(): Carbon
+    {
+        return SkillHistory::first()?->created_at ?? now();
+    }
+
+    #[Computed]
+    public function maxDaysAgo(): int
+    {
+        return (int) now()->diffInDays($this->earliestDate);
+    }
+
+    #[Computed]
+    public function viewingDate(): Carbon
+    {
+        return now()->subDays($this->daysAgo);
+    }
 
     #[Computed]
     public function users()

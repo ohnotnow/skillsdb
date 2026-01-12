@@ -91,6 +91,24 @@ class User extends Authenticatable
     }
 
     /**
+     * Get a user's skill level at a specific point in time by replaying history.
+     */
+    public function getSkillLevelAt(Skill $skill, \Carbon\Carbon $date): ?SkillLevel
+    {
+        $latestEvent = SkillHistory::where('user_id', $this->id)
+            ->where('skill_id', $skill->id)
+            ->where('created_at', '<=', $date)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (! $latestEvent || $latestEvent->event_type === SkillHistoryEvent::Removed) {
+            return null;
+        }
+
+        return $latestEvent->new_level ? SkillLevel::from($latestEvent->new_level) : null;
+    }
+
+    /**
      * Get counts of skills at each level.
      *
      * @return array{low: int, medium: int, high: int, total: int}

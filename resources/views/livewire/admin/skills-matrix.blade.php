@@ -22,6 +22,16 @@
         </div>
     </div>
 
+    <flux:field class="mb-6">
+        <flux:label>
+            Time travel
+            <x-slot name="trailing">
+                <span class="tabular-nums">{{ $this->viewingDate->format('j M Y') }}</span>
+            </x-slot>
+        </flux:label>
+        <flux:slider wire:model.live="daysAgo" min="0" max="{{ $this->maxDaysAgo }}" />
+    </flux:field>
+
     @if ($this->users->count() > 0 && $this->skills->count() > 0)
         <div class="overflow-x-auto">
             <div class="inline-grid gap-2" style="grid-template-columns: auto repeat({{ $this->skills->count() }}, 3.5rem);">
@@ -45,7 +55,7 @@
                     @foreach ($this->skills as $skill)
                         <div
                             wire:key="cell-{{ $user->id }}-{{ $skill->id }}"
-                            class="h-8 {{ $user->getSkillLevel($skill)?->bgClass() ?? 'bg-zinc-100 dark:bg-zinc-800' }}"
+                            class="h-8 {{ $user->getSkillLevelAt($skill, $this->viewingDate)?->bgClass() ?? 'bg-zinc-100 dark:bg-zinc-800' }}"
                         ></div>
                     @endforeach
                 @endforeach
