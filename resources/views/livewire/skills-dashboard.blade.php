@@ -27,9 +27,9 @@
 
             @if($this->colleagueInsights->isNotEmpty() || $this->trendingSkills->isNotEmpty() || $hasPoints)
                 <flux:separator class="my-4" />
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {{-- Left column: insights and trending --}}
-                    <div class="md:col-span-2 space-y-4">
+                    <div class="space-y-4">
                         {{-- Colleague insights --}}
                         @if($this->colleagueInsights->isNotEmpty())
                             <div>
@@ -72,7 +72,7 @@
                     {{-- Right column: skill points chart --}}
                     @if($hasPoints)
                         <div>
-                            <flux:chart :value="$this->skillsOverTime" class="h-32">
+                            <flux:chart :value="$this->skillsOverTime" class="h-48">
                                 <flux:chart.summary class="mb-2">
                                     <div class="flex items-baseline gap-2">
                                         <flux:heading size="xl" class="tabular-nums">
@@ -82,7 +82,7 @@
                                     </div>
                                 </flux:chart.summary>
 
-                                <flux:chart.viewport class="h-20">
+                                <flux:chart.viewport class="h-32">
                                     <flux:chart.svg>
                                         <flux:chart.line field="points" class="text-sky-500 dark:text-sky-400" />
                                         <flux:chart.area field="points" class="text-sky-500/20 dark:text-sky-400/20" />
