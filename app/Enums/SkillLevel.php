@@ -25,4 +25,13 @@ enum SkillLevel: int
             self::High => 'green',
         };
     }
+
+    public function bgClass(): string
+    {
+        return match ($this) {
+            self::Low => 'bg-zinc-200 dark:bg-zinc-600',
+            self::Medium => 'bg-sky-200 dark:bg-sky-700',
+            self::High => 'bg-green-200 dark:bg-green-700',
+        };
+    }
 }

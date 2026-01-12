@@ -24,7 +24,7 @@
 
     @if ($this->users->count() > 0 && $this->skills->count() > 0)
         <div class="overflow-x-auto">
-            <div class="inline-grid gap-px" style="grid-template-columns: auto repeat({{ $this->skills->count() }}, 3.5rem);">
+            <div class="inline-grid gap-2" style="grid-template-columns: auto repeat({{ $this->skills->count() }}, 3.5rem);">
                 {{-- Header row --}}
                 <div class="p-2 font-medium self-end">
                     <flux:text>Name</flux:text>
@@ -39,22 +39,14 @@
 
                 {{-- Data rows --}}
                 @foreach ($this->users as $user)
-                    <div wire:key="name-{{ $user->id }}" class="p-2">
+                    <div wire:key="name-{{ $user->id }}" class="">
                         <flux:text>{{ $user->full_name }}</flux:text>
                     </div>
                     @foreach ($this->skills as $skill)
-                        <div wire:key="cell-{{ $user->id }}-{{ $skill->id }}" class="p-2">
-                            @php
-                                $level = $user->getSkillLevel($skill);
-                            @endphp
-                            @if ($level)
-                                <flux:badge size="sm" color="{{ $level->colour() }}">
-                                    {{ substr($level->label(), 0, 1) }}
-                                </flux:badge>
-                            @else
-                                <flux:badge size="sm" color="zinc" icon="minus-circle"></flux:badge>
-                            @endif
-                        </div>
+                        <div
+                            wire:key="cell-{{ $user->id }}-{{ $skill->id }}"
+                            class="h-8 {{ $user->getSkillLevel($skill)?->bgClass() ?? 'bg-zinc-100 dark:bg-zinc-800' }}"
+                        ></div>
                     @endforeach
                 @endforeach
             </div>
@@ -62,15 +54,15 @@
 
         <div class="mt-4 flex flex-wrap gap-4">
             <div class="flex items-center gap-2">
-                <flux:badge size="sm" color="amber">L</flux:badge>
+                <div class="w-6 h-6 rounded {{ \App\Enums\SkillLevel::Low->bgClass() }}"></div>
                 <flux:text>Low</flux:text>
             </div>
             <div class="flex items-center gap-2">
-                <flux:badge size="sm" color="sky">M</flux:badge>
+                <div class="w-6 h-6 rounded {{ \App\Enums\SkillLevel::Medium->bgClass() }}"></div>
                 <flux:text>Medium</flux:text>
             </div>
             <div class="flex items-center gap-2">
-                <flux:badge size="sm" color="green">H</flux:badge>
+                <div class="w-6 h-6 rounded {{ \App\Enums\SkillLevel::High->bgClass() }}"></div>
                 <flux:text>High</flux:text>
             </div>
         </div>
