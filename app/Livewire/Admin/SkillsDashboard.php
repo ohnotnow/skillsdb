@@ -18,6 +18,12 @@ class SkillsDashboard extends Component
     #[Url(except: 'overview')]
     public string $tab = 'overview';
 
+    #[Url(except: '')]
+    public string $teamSearch = '';
+
+    #[Url(except: '')]
+    public string $skillFilter = '';
+
     // Summary stats
 
     #[Computed]
@@ -148,6 +154,90 @@ class SkillsDashboard extends Component
                 'time' => $h->created_at->diffForHumans(),
             ])
             ->toArray();
+    }
+
+    // By Category tab - detailed breakdown
+
+    #[Computed]
+    public function categoriesWithSkills(): array
+    {
+        return SkillCategory::with(['skills' => function ($query) {
+            $query->approved()
+                ->with(['users' => fn ($q) => $q->withPivot('level')])
+                ->withCount('users')
+                ->orderBy('name');
+        }])
+            ->orderBy('name')
+            ->get()
+            ->map(function ($category) {
+                $skills = $category->skills->map(function ($skill) {
+                    $levelCounts = $skill->users->groupBy(fn ($u) => $u->pivot->level)
+                        ->map->count();
+
+                    return [
+                        'id' => $skill->id,
+                        'name' => $skill->name,
+                        'userCount' => $skill->users_count,
+                        'high' => $levelCounts[SkillLevel::High->value] ?? 0,
+                        'medium' => $levelCounts[SkillLevel::Medium->value] ?? 0,
+                        'low' => $levelCounts[SkillLevel::Low->value] ?? 0,
+                    ];
+                });
+
+                $userIds = $category->skills->flatMap(fn ($s) => $s->users->pluck('id'))->unique();
+
+                return [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'skillCount' => $skills->count(),
+                    'userCount' => $userIds->count(),
+                    'skills' => $skills->toArray(),
+                ];
+            })
+            ->toArray();
+    }
+
+    // Team tab - user directory
+
+    #[Computed]
+    public function teamMembers(): array
+    {
+        return User::query()
+            ->withCount('skills')
+            ->with(['skills' => fn ($q) => $q->withPivot('level')])
+            ->when($this->teamSearch, function ($query) {
+                $query->where(function ($q) {
+                    $q->where('forenames', 'like', "%{$this->teamSearch}%")
+                        ->orWhere('surname', 'like', "%{$this->teamSearch}%");
+                });
+            })
+            ->when($this->skillFilter, function ($query) {
+                $query->whereHas('skills', fn ($q) => $q->where('skill_id', $this->skillFilter));
+            })
+            ->orderBy('surname')
+            ->orderBy('forenames')
+            ->get()
+            ->map(function ($user) {
+                $distribution = $user->getSkillDistribution();
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->full_name,
+                    'skillCount' => $user->skills_count,
+                    'high' => $distribution['high'],
+                    'medium' => $distribution['medium'],
+                    'low' => $distribution['low'],
+                    'lastUpdated' => $user->getLastUpdatedText(),
+                    'isStale' => $user->hasStaleSkills(),
+                ];
+            })
+            ->toArray();
+    }
+
+    #[Computed]
+    public function allSkillsForFilter()
+    {
+        return Skill::approved()->orderBy('name')->get();
     }
 
     public function render()
