@@ -34,7 +34,7 @@
 
     @if ($this->users->count() > 0 && $this->skills->count() > 0)
         <div class="overflow-x-auto">
-            <div class="inline-grid gap-2" style="grid-template-columns: auto repeat({{ $this->skills->count() }}, 3.5rem);">
+            <div wire:transition class="inline-grid gap-2" style="grid-template-columns: auto repeat({{ $this->skills->count() }}, 3.5rem);">
                 {{-- Header row --}}
                 <div class="p-2 font-medium self-end">
                     <flux:text>Name</flux:text>
