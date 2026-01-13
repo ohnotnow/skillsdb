@@ -13,9 +13,9 @@
                 let current = $wire.timelinePosition;
                 let max = {{ $this->timelineMax }};
                 if (current >= max) {
-                    $wire.timelinePosition = 0;
+                    $wire.set('timelinePosition', 0);
                 } else {
-                    $wire.timelinePosition = current + 1;
+                    $wire.set('timelinePosition', current + 1);
                 }
             }, this.speed);
         },
@@ -72,17 +72,37 @@
             </div>
         </div>
 
+        @php
+            $colourClasses = [
+                'sky' => ['header' => 'bg-sky-200 dark:bg-sky-800', 'empty' => 'bg-sky-100/50 dark:bg-sky-900/30'],
+                'emerald' => ['header' => 'bg-emerald-200 dark:bg-emerald-800', 'empty' => 'bg-emerald-100/50 dark:bg-emerald-900/30'],
+                'violet' => ['header' => 'bg-violet-200 dark:bg-violet-800', 'empty' => 'bg-violet-100/50 dark:bg-violet-900/30'],
+                'amber' => ['header' => 'bg-amber-200 dark:bg-amber-800', 'empty' => 'bg-amber-100/50 dark:bg-amber-900/30'],
+                'rose' => ['header' => 'bg-rose-200 dark:bg-rose-800', 'empty' => 'bg-rose-100/50 dark:bg-rose-900/30'],
+                'cyan' => ['header' => 'bg-cyan-200 dark:bg-cyan-800', 'empty' => 'bg-cyan-100/50 dark:bg-cyan-900/30'],
+                'lime' => ['header' => 'bg-lime-200 dark:bg-lime-800', 'empty' => 'bg-lime-100/50 dark:bg-lime-900/30'],
+                'fuchsia' => ['header' => 'bg-fuchsia-200 dark:bg-fuchsia-800', 'empty' => 'bg-fuchsia-100/50 dark:bg-fuchsia-900/30'],
+                'orange' => ['header' => 'bg-orange-200 dark:bg-orange-800', 'empty' => 'bg-orange-100/50 dark:bg-orange-900/30'],
+                'indigo' => ['header' => 'bg-indigo-200 dark:bg-indigo-800', 'empty' => 'bg-indigo-100/50 dark:bg-indigo-900/30'],
+                'zinc' => ['header' => 'bg-zinc-200 dark:bg-zinc-700', 'empty' => 'bg-zinc-100 dark:bg-zinc-800'],
+            ];
+        @endphp
+
         <div class="overflow-x-auto">
             <div wire:transition class="inline-grid gap-px bg-zinc-200 dark:bg-zinc-700" style="grid-template-columns: auto repeat({{ $this->skills->count() }}, 1.1rem);">
                 {{-- Header row --}}
                 <div class="bg-zinc-50 dark:bg-zinc-800 p-0.5"></div>
                 @foreach ($this->skills as $skill)
-                    <flux:tooltip content="{{ $skill['fullName'] }}" position="top">
+                    @php
+                        $catColour = $this->getCategoryColour($skill['categoryId']);
+                        $headerClass = $colourClasses[$catColour]['header'] ?? $colourClasses['zinc']['header'];
+                    @endphp
+                    <flux:tooltip content="{{ $skill['categoryName'] ? $skill['categoryName'] . ': ' : '' }}{{ $skill['fullName'] }}" position="top">
                         <div
                             wire:key="header-{{ $skill['id'] }}"
-                            class="bg-zinc-50 dark:bg-zinc-800 p-0.5 text-center cursor-default"
+                            class="{{ $headerClass }} p-0.5 text-center cursor-default"
                         >
-                            <span class="text-[8px] font-medium text-zinc-600 dark:text-zinc-400 leading-none">
+                            <span class="text-[8px] font-medium text-zinc-700 dark:text-zinc-200 leading-none">
                                 {{ $skill['abbr'] }}
                             </span>
                         </div>
@@ -104,11 +124,13 @@
                     @foreach ($this->skills as $skill)
                         @php
                             $level = $user['skills'][$skill['id']] ?? null;
+                            $catColour = $this->getCategoryColour($skill['categoryId']);
+                            $emptyClass = $colourClasses[$catColour]['empty'] ?? $colourClasses['zinc']['empty'];
                             $bgClass = match($level) {
                                 \App\Enums\SkillLevel::High->value => 'bg-green-500 dark:bg-green-600',
                                 \App\Enums\SkillLevel::Medium->value => 'bg-sky-500 dark:bg-sky-600',
                                 \App\Enums\SkillLevel::Low->value => 'bg-zinc-400 dark:bg-zinc-500',
-                                default => 'bg-zinc-100 dark:bg-zinc-800',
+                                default => $emptyClass,
                             };
                             $levelLabel = match($level) {
                                 \App\Enums\SkillLevel::High->value => 'High',

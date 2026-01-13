@@ -33,11 +33,19 @@ class SkillsDashboard extends Component
     }
 
     #[Computed]
-    public function skillsUsedCount(): int
+    public function skillLevelCounts(): array
     {
-        return Skill::approved()
-            ->whereHas('users')
-            ->count();
+        $counts = \App\Models\SkillUser::query()
+            ->selectRaw('level, COUNT(*) as count')
+            ->groupBy('level')
+            ->pluck('count', 'level')
+            ->toArray();
+
+        return [
+            'high' => $counts[SkillLevel::High->value] ?? 0,
+            'medium' => $counts[SkillLevel::Medium->value] ?? 0,
+            'low' => $counts[SkillLevel::Low->value] ?? 0,
+        ];
     }
 
     #[Computed]
@@ -66,27 +74,54 @@ class SkillsDashboard extends Component
     #[Computed]
     public function categoryStrength(): array
     {
+        $totalTeamMembers = $this->teamMemberCount;
+
         $categories = SkillCategory::with(['skills' => function ($query) {
-            $query->approved()->withCount('users');
+            $query->approved()->with('users');
         }])->get();
 
-        return $categories->map(function ($category) {
+        return $categories->map(function ($category) use ($totalTeamMembers) {
             $skills = $category->skills;
-            $totalSkills = $skills->count();
-            $usedSkills = $skills->filter(fn ($s) => $s->users_count > 0)->count();
 
             // Get unique users who have any skill in this category
             $userIds = $skills->flatMap(fn ($s) => $s->users->pluck('id'))->unique();
+            $userCount = $userIds->count();
 
             return [
                 'id' => $category->id,
                 'name' => $category->name,
-                'totalSkills' => $totalSkills,
-                'usedSkills' => $usedSkills,
-                'userCount' => $userIds->count(),
-                'percentage' => $totalSkills > 0 ? round(($usedSkills / $totalSkills) * 100) : 0,
+                'skillCount' => $skills->count(),
+                'userCount' => $userCount,
+                'percentage' => $totalTeamMembers > 0 ? round(($userCount / $totalTeamMembers) * 100) : 0,
             ];
         })->sortByDesc('userCount')->values()->toArray();
+    }
+
+    #[Computed]
+    public function categoryColours(): array
+    {
+        $palette = [
+            'sky', 'emerald', 'violet', 'amber', 'rose',
+            'cyan', 'lime', 'fuchsia', 'orange', 'indigo',
+        ];
+
+        $categories = SkillCategory::orderBy('name')->pluck('id')->values();
+
+        $colours = [];
+        foreach ($categories as $index => $categoryId) {
+            $colours[$categoryId] = $palette[$index % count($palette)];
+        }
+
+        return $colours;
+    }
+
+    public function getCategoryColour(?int $categoryId): string
+    {
+        if (! $categoryId) {
+            return 'zinc';
+        }
+
+        return $this->categoryColours[$categoryId] ?? 'zinc';
     }
 
     // Needs attention - skills with coverage issues

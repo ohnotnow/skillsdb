@@ -19,39 +19,63 @@
             {{-- Summary Stats --}}
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                 <flux:card class="!p-4">
-                    <flux:text class="text-sm">Team Members</flux:text>
-                    <flux:heading size="xl">{{ $this->teamMemberCount }}</flux:heading>
+                    <flux:text class="text-sm mb-2">Team Members</flux:text>
+                    <flux:badge size="lg">{{ $this->teamMemberCount }}</flux:badge>
                 </flux:card>
                 <flux:card class="!p-4">
-                    <flux:text class="text-sm">Skills Used</flux:text>
-                    <flux:heading size="xl">{{ $this->skillsUsedCount }}/{{ $this->totalApprovedSkills }}</flux:heading>
+                    <flux:text class="text-sm mb-2">Skill Levels</flux:text>
+                    <div class="flex items-center gap-2">
+                        <flux:badge size="lg" color="green">{{ $this->skillLevelCounts['high'] }}</flux:badge>
+                        <flux:badge size="lg" color="sky">{{ $this->skillLevelCounts['medium'] }}</flux:badge>
+                        <flux:badge size="lg" color="zinc">{{ $this->skillLevelCounts['low'] }}</flux:badge>
+                    </div>
                 </flux:card>
                 <flux:card class="!p-4">
-                    <flux:text class="text-sm">Avg per User</flux:text>
-                    <flux:heading size="xl">{{ $this->averageSkillsPerUser }}</flux:heading>
+                    <flux:text class="text-sm mb-2">Avg per User</flux:text>
+                    <flux:badge size="lg">{{ $this->averageSkillsPerUser }}</flux:badge>
                 </flux:card>
                 <flux:card class="!p-4">
-                    <flux:text class="text-sm">Changes /30d</flux:text>
-                    <flux:heading size="xl">{{ $this->changesLast30Days }}</flux:heading>
+                    <flux:text class="text-sm mb-2">Changes /30d</flux:text>
+                    <flux:badge size="lg">{{ $this->changesLast30Days }}</flux:badge>
                 </flux:card>
             </div>
 
             {{-- Category Strength --}}
+            @php
+                $barColours = [
+                    'sky' => 'bg-sky-500 dark:bg-sky-400',
+                    'emerald' => 'bg-emerald-500 dark:bg-emerald-400',
+                    'violet' => 'bg-violet-500 dark:bg-violet-400',
+                    'amber' => 'bg-amber-500 dark:bg-amber-400',
+                    'rose' => 'bg-rose-500 dark:bg-rose-400',
+                    'cyan' => 'bg-cyan-500 dark:bg-cyan-400',
+                    'lime' => 'bg-lime-500 dark:bg-lime-400',
+                    'fuchsia' => 'bg-fuchsia-500 dark:bg-fuchsia-400',
+                    'orange' => 'bg-orange-500 dark:bg-orange-400',
+                    'indigo' => 'bg-indigo-500 dark:bg-indigo-400',
+                    'zinc' => 'bg-zinc-500 dark:bg-zinc-400',
+                ];
+            @endphp
             <flux:card class="mb-8">
                 <flux:heading size="lg" class="mb-4">Category Strength</flux:heading>
+                <flux:text class="text-sm mb-4">Team coverage per category ({{ $this->teamMemberCount }} members total)</flux:text>
 
                 @forelse ($this->categoryStrength as $category)
+                    @php
+                        $catColour = $this->getCategoryColour($category['id']);
+                        $barClass = $barColours[$catColour] ?? $barColours['zinc'];
+                    @endphp
                     <div wire:key="cat-{{ $category['id'] }}" class="mb-4 last:mb-0">
                         <div class="flex justify-between items-center mb-1">
                             <flux:text class="font-medium">{{ $category['name'] }}</flux:text>
                             <flux:text class="text-sm">
-                                {{ $category['userCount'] }} {{ $category['userCount'] === 1 ? 'person' : 'people' }},
-                                {{ $category['usedSkills'] }}/{{ $category['totalSkills'] }} skills
+                                {{ $category['userCount'] }}/{{ $this->teamMemberCount }} people
+                                <span class="text-zinc-400 ml-1">({{ $category['skillCount'] }} skills)</span>
                             </flux:text>
                         </div>
                         <div class="h-3 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
                             <div
-                                class="h-full bg-sky-500 dark:bg-sky-400 rounded-full transition-all duration-300"
+                                class="h-full {{ $barClass }} rounded-full transition-all duration-300"
                                 style="width: {{ $category['percentage'] }}%"
                             ></div>
                         </div>
@@ -91,7 +115,8 @@
 
                 {{-- Recent Activity --}}
                 <flux:card>
-                    <flux:heading size="lg" class="mb-4">Recent Activity</flux:heading>
+                    <flux:heading size="lg" class="mb-4">Latest Activity</flux:heading>
+                    <flux:text class="text-sm mb-4">Last 10 skill changes</flux:text>
 
                     @forelse ($this->recentActivity as $activity)
                         <div wire:key="activity-{{ $loop->index }}" class="flex items-start gap-2 mb-3 last:mb-0">

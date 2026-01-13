@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Skill;
+use App\Models\SkillCategory;
 use App\Models\SkillHistory;
 use App\Models\User;
 use Carbon\Carbon;
@@ -87,13 +88,47 @@ class CompactMatrix extends Component
     public function skills()
     {
         return Skill::approved()
-            ->orderBy('name')
+            ->with('category')
             ->get()
+            ->sortBy([
+                fn ($a, $b) => ($a->category?->name ?? 'zzz') <=> ($b->category?->name ?? 'zzz'),
+                fn ($a, $b) => $a->name <=> $b->name,
+            ])
+            ->values()
             ->map(fn ($skill) => [
                 'id' => $skill->id,
                 'abbr' => $this->getAbbreviation($skill->name),
                 'fullName' => $skill->name,
+                'categoryId' => $skill->skill_category_id,
+                'categoryName' => $skill->category?->name,
             ]);
+    }
+
+    #[Computed]
+    public function categoryColours(): array
+    {
+        $palette = [
+            'sky', 'emerald', 'violet', 'amber', 'rose',
+            'cyan', 'lime', 'fuchsia', 'orange', 'indigo',
+        ];
+
+        $categories = SkillCategory::orderBy('name')->pluck('id')->values();
+
+        $colours = [];
+        foreach ($categories as $index => $categoryId) {
+            $colours[$categoryId] = $palette[$index % count($palette)];
+        }
+
+        return $colours;
+    }
+
+    public function getCategoryColour(?int $categoryId): string
+    {
+        if (! $categoryId) {
+            return 'zinc';
+        }
+
+        return $this->categoryColours[$categoryId] ?? 'zinc';
     }
 
     private function getInitials(string $forenames, string $surname): string

@@ -32,6 +32,22 @@
         <flux:slider wire:model.live="timelinePosition" min="0" max="{{ $this->timelineMax }}" />
     </flux:field>
 
+    @php
+        $colourClasses = [
+            'sky' => ['header' => 'bg-sky-200 dark:bg-sky-800', 'empty' => 'bg-sky-100/50 dark:bg-sky-900/30'],
+            'emerald' => ['header' => 'bg-emerald-200 dark:bg-emerald-800', 'empty' => 'bg-emerald-100/50 dark:bg-emerald-900/30'],
+            'violet' => ['header' => 'bg-violet-200 dark:bg-violet-800', 'empty' => 'bg-violet-100/50 dark:bg-violet-900/30'],
+            'amber' => ['header' => 'bg-amber-200 dark:bg-amber-800', 'empty' => 'bg-amber-100/50 dark:bg-amber-900/30'],
+            'rose' => ['header' => 'bg-rose-200 dark:bg-rose-800', 'empty' => 'bg-rose-100/50 dark:bg-rose-900/30'],
+            'cyan' => ['header' => 'bg-cyan-200 dark:bg-cyan-800', 'empty' => 'bg-cyan-100/50 dark:bg-cyan-900/30'],
+            'lime' => ['header' => 'bg-lime-200 dark:bg-lime-800', 'empty' => 'bg-lime-100/50 dark:bg-lime-900/30'],
+            'fuchsia' => ['header' => 'bg-fuchsia-200 dark:bg-fuchsia-800', 'empty' => 'bg-fuchsia-100/50 dark:bg-fuchsia-900/30'],
+            'orange' => ['header' => 'bg-orange-200 dark:bg-orange-800', 'empty' => 'bg-orange-100/50 dark:bg-orange-900/30'],
+            'indigo' => ['header' => 'bg-indigo-200 dark:bg-indigo-800', 'empty' => 'bg-indigo-100/50 dark:bg-indigo-900/30'],
+            'zinc' => ['header' => 'bg-zinc-200 dark:bg-zinc-700', 'empty' => 'bg-zinc-100 dark:bg-zinc-800'],
+        ];
+    @endphp
+
     @if ($this->users->count() > 0 && $this->skills->count() > 0)
         <div class="overflow-x-auto">
             <div wire:transition class="inline-grid gap-2" style="grid-template-columns: auto repeat({{ $this->skills->count() }}, 3.5rem);">
@@ -40,11 +56,17 @@
                     <flux:text>Name</flux:text>
                 </div>
                 @foreach ($this->skills as $skill)
-                    <div wire:key="header-{{ $skill->id }}" class="h-32 relative">
-                        <div class="absolute bottom-2 left-4 origin-bottom-left -rotate-45 whitespace-nowrap text-sm font-medium">
-                            {{ $skill->name }}
+                    @php
+                        $catColour = $this->getCategoryColour($skill->skill_category_id);
+                        $headerClass = $colourClasses[$catColour]['header'] ?? $colourClasses['zinc']['header'];
+                    @endphp
+                    <flux:tooltip content="{{ $skill->category?->name ?? 'Uncategorised' }}" position="top">
+                        <div wire:key="header-{{ $skill->id }}" class="h-32 relative rounded-t {{ $headerClass }} cursor-default">
+                            <div class="absolute bottom-2 left-4 origin-bottom-left -rotate-45 whitespace-nowrap text-sm font-medium">
+                                {{ $skill->name }}
+                            </div>
                         </div>
-                    </div>
+                    </flux:tooltip>
                 @endforeach
 
                 {{-- Data rows --}}
@@ -53,9 +75,14 @@
                         <flux:text>{{ $user->full_name }}</flux:text>
                     </div>
                     @foreach ($this->skills as $skill)
+                        @php
+                            $catColour = $this->getCategoryColour($skill->skill_category_id);
+                            $emptyClass = $colourClasses[$catColour]['empty'] ?? $colourClasses['zinc']['empty'];
+                            $levelClass = $user->getSkillLevelAt($skill, $this->viewingDate)?->bgClass();
+                        @endphp
                         <div
                             wire:key="cell-{{ $user->id }}-{{ $skill->id }}"
-                            class="h-8 {{ $user->getSkillLevelAt($skill, $this->viewingDate)?->bgClass() ?? 'bg-zinc-100 dark:bg-zinc-800' }}"
+                            class="h-8 {{ $levelClass ?? $emptyClass }}"
                         ></div>
                     @endforeach
                 @endforeach
