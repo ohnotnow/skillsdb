@@ -38,7 +38,7 @@
                             <flux:table.row wire:key="skill-{{ $skill->id }}">
                                 <flux:table.cell class="font-medium">
                                     @if ($skill->isPending())
-                                        <flux:badge size="sm" color="amber" class="mr-2">Pending</flux:badge>
+                                        <flux:badge as="button" wire:click="approveSkill({{ $skill->id }})" size="sm" color="amber" class="mr-2 cursor-pointer" title="Click to approve this skill">Pending</flux:badge>
                                     @endif
                                     {{ $skill->name }}
                                 </flux:table.cell>
