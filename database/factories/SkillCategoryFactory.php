@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\FluxColour;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,6 +19,7 @@ class SkillCategoryFactory extends Factory
     {
         return [
             'name' => fake()->unique()->word(),
+            'colour' => fake()->randomElement(FluxColour::cases()),
         ];
     }
 }

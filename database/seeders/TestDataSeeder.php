@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\FluxColour;
 use App\Enums\SkillLevel;
 use App\Models\Skill;
 use App\Models\SkillCategory;
@@ -51,16 +52,16 @@ class TestDataSeeder extends Seeder
     private function createSkillCategories(): array
     {
         return [
-            'programming' => SkillCategory::create(['name' => 'Programming Languages']),
-            'web' => SkillCategory::create(['name' => 'Web Development']),
-            'databases' => SkillCategory::create(['name' => 'Databases']),
-            'devops' => SkillCategory::create(['name' => 'DevOps & Infrastructure']),
-            'cloud' => SkillCategory::create(['name' => 'Cloud Platforms']),
-            'os' => SkillCategory::create(['name' => 'Operating Systems']),
-            'networking' => SkillCategory::create(['name' => 'Networking & Security']),
-            'research' => SkillCategory::create(['name' => 'Research Computing']),
-            'data' => SkillCategory::create(['name' => 'Data & Analytics']),
-            'university' => SkillCategory::create(['name' => 'University Systems']),
+            'programming' => SkillCategory::create(['name' => 'Programming Languages', 'colour' => FluxColour::Sky]),
+            'web' => SkillCategory::create(['name' => 'Web Development', 'colour' => FluxColour::Emerald]),
+            'databases' => SkillCategory::create(['name' => 'Databases', 'colour' => FluxColour::Violet]),
+            'devops' => SkillCategory::create(['name' => 'DevOps & Infrastructure', 'colour' => FluxColour::Amber]),
+            'cloud' => SkillCategory::create(['name' => 'Cloud Platforms', 'colour' => FluxColour::Cyan]),
+            'os' => SkillCategory::create(['name' => 'Operating Systems', 'colour' => FluxColour::Rose]),
+            'networking' => SkillCategory::create(['name' => 'Networking & Security', 'colour' => FluxColour::Red]),
+            'research' => SkillCategory::create(['name' => 'Research Computing', 'colour' => FluxColour::Indigo]),
+            'data' => SkillCategory::create(['name' => 'Data & Analytics', 'colour' => FluxColour::Lime]),
+            'university' => SkillCategory::create(['name' => 'University Systems', 'colour' => FluxColour::Orange]),
         ];
     }
 

@@ -2,10 +2,12 @@
 
 namespace App\Livewire\Admin;
 
+use App\Enums\FluxColour;
 use App\Models\Skill;
 use App\Models\SkillCategory;
 use Flux;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -14,10 +16,13 @@ use Livewire\Component;
 #[Layout('components.layouts.app')]
 class SkillsManager extends Component
 {
+    #[Url(except: 'skills')]
+    public string $tab = 'skills';
+
     #[Url]
     public $search = '';
 
-    // Create/Edit modal state
+    // Skill Create/Edit modal state
     public bool $showSkillModal = false;
 
     public ?int $editingSkillId = null;
@@ -28,8 +33,24 @@ class SkillsManager extends Component
 
     public $skillCategoryId = '';
 
-    // Delete confirmation
+    public string $categorySearchTerm = '';
+
+    // Skill Delete confirmation
     public ?int $deletingSkillId = null;
+
+    // Category Create/Edit modal state
+    public bool $showCategoryModal = false;
+
+    public ?int $editingCategoryId = null;
+
+    public string $categoryName = '';
+
+    public $categoryColour = '';
+
+    // Category Delete modal state
+    public ?int $deletingCategoryId = null;
+
+    public $migrateToCategoryId = '';
 
     #[Computed]
     public function skills()
@@ -52,12 +73,37 @@ class SkillsManager extends Component
     #[Computed]
     public function categories()
     {
-        return SkillCategory::orderBy('name')->get();
+        return SkillCategory::withCount('skills')->orderBy('name')->get();
+    }
+
+    #[Computed]
+    public function fluxColours(): array
+    {
+        return FluxColour::cases();
+    }
+
+    #[Computed]
+    public function filteredCategoryOptions()
+    {
+        $search = trim($this->categorySearchTerm);
+
+        $categories = SkillCategory::query()
+            ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
+            ->orderBy('name')
+            ->get();
+
+        $exactMatch = $search && $categories->contains(fn ($c) => strtolower($c->name) === strtolower($search));
+
+        return [
+            'categories' => $categories,
+            'showCreate' => $search && ! $exactMatch,
+            'createName' => $search,
+        ];
     }
 
     public function openCreateModal(): void
     {
-        $this->reset(['editingSkillId', 'skillName', 'skillDescription', 'skillCategoryId']);
+        $this->reset(['editingSkillId', 'skillName', 'skillDescription', 'skillCategoryId', 'categorySearchTerm']);
         $this->showSkillModal = true;
     }
 
@@ -68,12 +114,21 @@ class SkillsManager extends Component
         $this->skillName = $skill->name;
         $this->skillDescription = $skill->description ?? '';
         $this->skillCategoryId = $skill->skill_category_id ?? '';
+        $this->categorySearchTerm = '';
         $this->showSkillModal = true;
     }
 
     public function closeSkillModal(): void
     {
         $this->showSkillModal = false;
+    }
+
+    public function createCategoryFromSearch(): void
+    {
+        $category = SkillCategory::create(['name' => $this->categorySearchTerm]);
+        $this->skillCategoryId = $category->id;
+        $this->categorySearchTerm = '';
+        unset($this->categories, $this->filteredCategoryOptions);
     }
 
     public function saveSkill(): void
@@ -145,6 +200,122 @@ class SkillsManager extends Component
         unset($this->skills);
 
         Flux::toast(variant: 'success', heading: 'Skill approved.', text: "'{$skill->name}' is now visible to all users.");
+    }
+
+    // Category CRUD methods
+
+    public function openCreateCategoryModal(): void
+    {
+        $this->reset(['editingCategoryId', 'categoryName', 'categoryColour']);
+        $this->showCategoryModal = true;
+    }
+
+    public function openEditCategoryModal(int $categoryId): void
+    {
+        $category = SkillCategory::findOrFail($categoryId);
+        $this->editingCategoryId = $category->id;
+        $this->categoryName = $category->name;
+        $this->categoryColour = $category->colour?->value ?? '';
+        $this->showCategoryModal = true;
+    }
+
+    public function closeCategoryModal(): void
+    {
+        $this->showCategoryModal = false;
+    }
+
+    public function saveCategory(): void
+    {
+        $this->validate([
+            'categoryName' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('skill_categories', 'name')->ignore($this->editingCategoryId),
+            ],
+            'categoryColour' => ['nullable', Rule::enum(FluxColour::class)],
+        ]);
+
+        $data = [
+            'name' => $this->categoryName,
+            'colour' => $this->categoryColour ?: null,
+        ];
+
+        if ($this->editingCategoryId) {
+            $category = SkillCategory::findOrFail($this->editingCategoryId);
+            $category->update($data);
+            $message = 'Category updated.';
+        } else {
+            SkillCategory::create($data);
+            $message = 'Category created.';
+        }
+
+        $this->closeCategoryModal();
+        unset($this->categories);
+
+        Flux::toast(text: '', heading: $message, variant: 'success');
+    }
+
+    public function confirmDeleteCategory(int $categoryId): void
+    {
+        $this->deletingCategoryId = $categoryId;
+        $this->migrateToCategoryId = '';
+    }
+
+    public function cancelDeleteCategory(): void
+    {
+        $this->deletingCategoryId = null;
+        $this->migrateToCategoryId = '';
+    }
+
+    #[Computed]
+    public function deletingCategory(): ?SkillCategory
+    {
+        if (! $this->deletingCategoryId) {
+            return null;
+        }
+
+        return SkillCategory::withCount('skills')->find($this->deletingCategoryId);
+    }
+
+    #[Computed]
+    public function migrationTargetCategories()
+    {
+        if (! $this->deletingCategoryId) {
+            return collect();
+        }
+
+        return SkillCategory::where('id', '!=', $this->deletingCategoryId)
+            ->orderBy('name')
+            ->get();
+    }
+
+    public function deleteCategory(): void
+    {
+        if (! $this->deletingCategoryId) {
+            return;
+        }
+
+        $category = SkillCategory::withCount('skills')->findOrFail($this->deletingCategoryId);
+
+        if ($category->skills_count > 0) {
+            $this->validate([
+                'migrateToCategoryId' => ['required', 'exists:skill_categories,id'],
+            ], [
+                'migrateToCategoryId.required' => 'Please select a category to migrate skills to.',
+            ]);
+
+            Skill::where('skill_category_id', $category->id)
+                ->update(['skill_category_id' => $this->migrateToCategoryId]);
+        }
+
+        $category->delete();
+
+        $this->deletingCategoryId = null;
+        $this->migrateToCategoryId = '';
+        unset($this->categories, $this->skills, $this->deletingCategory, $this->migrationTargetCategories);
+
+        Flux::toast(text: '', heading: 'Category deleted.', variant: 'success');
     }
 
     public function render()

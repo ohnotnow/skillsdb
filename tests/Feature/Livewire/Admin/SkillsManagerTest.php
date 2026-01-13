@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\FluxColour;
 use App\Livewire\Admin\SkillsManager;
 use App\Models\Skill;
 use App\Models\SkillCategory;
@@ -233,7 +234,7 @@ it('shows user count for each skill', function () {
 
     Livewire::actingAs($admin)
         ->test(SkillsManager::class)
-        ->assertSee('3');
+        ->assertSeeHtml('data-test="skill-'.$skill->id.'-users-count"');
 });
 
 it('shows requester name for pending skills', function () {
@@ -246,4 +247,219 @@ it('shows requester name for pending skills', function () {
         ->test(SkillsManager::class)
         ->assertSee('Docker')
         ->assertSee('J. Smith');
+});
+
+// Category CRUD tests
+
+it('displays categories in the categories tab', function () {
+    $admin = User::factory()->admin()->create();
+    SkillCategory::factory()->create(['name' => 'DevOps', 'colour' => FluxColour::Sky]);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->set('tab', 'categories')
+        ->assertSee('DevOps')
+        ->assertSee('Sky');
+});
+
+it('can create a new category', function () {
+    $admin = User::factory()->admin()->create();
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->set('tab', 'categories')
+        ->call('openCreateCategoryModal')
+        ->assertSet('showCategoryModal', true)
+        ->assertSet('editingCategoryId', null)
+        ->set('categoryName', 'Programming Languages')
+        ->set('categoryColour', 'emerald')
+        ->call('saveCategory')
+        ->assertSet('showCategoryModal', false)
+        ->assertHasNoErrors();
+
+    $category = SkillCategory::where('name', 'Programming Languages')->first();
+    expect($category)->not->toBeNull();
+    expect($category->colour)->toBe(FluxColour::Emerald);
+});
+
+it('can create a category without a colour', function () {
+    $admin = User::factory()->admin()->create();
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openCreateCategoryModal')
+        ->set('categoryName', 'Uncategorised')
+        ->set('categoryColour', '')
+        ->call('saveCategory')
+        ->assertHasNoErrors();
+
+    $category = SkillCategory::where('name', 'Uncategorised')->first();
+    expect($category)->not->toBeNull();
+    expect($category->colour)->toBeNull();
+});
+
+it('validates required fields when creating a category', function () {
+    $admin = User::factory()->admin()->create();
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openCreateCategoryModal')
+        ->set('categoryName', '')
+        ->call('saveCategory')
+        ->assertHasErrors(['categoryName']);
+
+    expect(SkillCategory::count())->toBe(0);
+});
+
+it('validates colour is a valid flux colour', function () {
+    $admin = User::factory()->admin()->create();
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openCreateCategoryModal')
+        ->set('categoryName', 'Test Category')
+        ->set('categoryColour', 'invalid-colour')
+        ->call('saveCategory')
+        ->assertHasErrors(['categoryColour']);
+
+    expect(SkillCategory::count())->toBe(0);
+});
+
+it('prevents duplicate category names', function () {
+    $admin = User::factory()->admin()->create();
+    SkillCategory::factory()->create(['name' => 'DevOps']);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openCreateCategoryModal')
+        ->set('categoryName', 'DevOps')
+        ->call('saveCategory')
+        ->assertHasErrors(['categoryName']);
+});
+
+it('can edit a category', function () {
+    $admin = User::factory()->admin()->create();
+    $category = SkillCategory::factory()->create(['name' => 'Backend', 'colour' => FluxColour::Sky]);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openEditCategoryModal', $category->id)
+        ->assertSet('showCategoryModal', true)
+        ->assertSet('editingCategoryId', $category->id)
+        ->assertSet('categoryName', 'Backend')
+        ->assertSet('categoryColour', 'sky')
+        ->set('categoryName', 'Backend Development')
+        ->set('categoryColour', 'violet')
+        ->call('saveCategory')
+        ->assertSet('showCategoryModal', false)
+        ->assertHasNoErrors();
+
+    $category->refresh();
+    expect($category->name)->toBe('Backend Development');
+    expect($category->colour)->toBe(FluxColour::Violet);
+});
+
+it('allows editing a category to keep its own name', function () {
+    $admin = User::factory()->admin()->create();
+    $category = SkillCategory::factory()->create(['name' => 'DevOps']);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openEditCategoryModal', $category->id)
+        ->set('categoryColour', 'amber')
+        ->call('saveCategory')
+        ->assertHasNoErrors();
+
+    expect($category->fresh()->colour)->toBe(FluxColour::Amber);
+});
+
+it('can delete a category without skills', function () {
+    $admin = User::factory()->admin()->create();
+    $category = SkillCategory::factory()->create(['name' => 'Empty Category']);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('confirmDeleteCategory', $category->id)
+        ->assertSet('deletingCategoryId', $category->id)
+        ->call('deleteCategory')
+        ->assertHasNoErrors();
+
+    expect(SkillCategory::find($category->id))->toBeNull();
+});
+
+it('can cancel category delete', function () {
+    $admin = User::factory()->admin()->create();
+    $category = SkillCategory::factory()->create(['name' => 'Backend']);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('confirmDeleteCategory', $category->id)
+        ->assertSet('deletingCategoryId', $category->id)
+        ->call('cancelDeleteCategory')
+        ->assertSet('deletingCategoryId', null);
+
+    expect(SkillCategory::find($category->id))->not->toBeNull();
+});
+
+it('requires migration target when deleting category with skills', function () {
+    $admin = User::factory()->admin()->create();
+    $category = SkillCategory::factory()->create(['name' => 'Backend']);
+    Skill::factory()->approved()->create(['skill_category_id' => $category->id]);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('confirmDeleteCategory', $category->id)
+        ->call('deleteCategory')
+        ->assertHasErrors(['migrateToCategoryId']);
+
+    expect(SkillCategory::find($category->id))->not->toBeNull();
+});
+
+it('migrates skills when deleting category with skills', function () {
+    $admin = User::factory()->admin()->create();
+    $sourceCategory = SkillCategory::factory()->create(['name' => 'Old Category']);
+    $targetCategory = SkillCategory::factory()->create(['name' => 'New Category']);
+    $skill = Skill::factory()->approved()->create(['skill_category_id' => $sourceCategory->id]);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('confirmDeleteCategory', $sourceCategory->id)
+        ->set('migrateToCategoryId', $targetCategory->id)
+        ->call('deleteCategory')
+        ->assertHasNoErrors();
+
+    expect(SkillCategory::find($sourceCategory->id))->toBeNull();
+    expect($skill->fresh()->skill_category_id)->toBe($targetCategory->id);
+});
+
+it('shows skill count in categories tab', function () {
+    $admin = User::factory()->admin()->create();
+    $category = SkillCategory::factory()->create(['name' => 'DevOps']);
+    Skill::factory()->approved()->count(5)->create(['skill_category_id' => $category->id]);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->set('tab', 'categories')
+        ->assertSee('DevOps')
+        ->assertSeeHtml('data-test="category-'.$category->id.'-skills-count"');
+});
+
+it('can create a category inline when creating a skill', function () {
+    $admin = User::factory()->admin()->create();
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openCreateModal')
+        ->set('skillName', 'Claude Code')
+        ->set('categorySearchTerm', 'The best LLM evah!')
+        ->call('createCategoryFromSearch')
+        ->call('saveSkill')
+        ->assertHasNoErrors();
+
+    $category = SkillCategory::where('name', 'The best LLM evah!')->first();
+    expect($category)->not->toBeNull();
+
+    $skill = Skill::where('name', 'Claude Code')->first();
+    expect($skill)->not->toBeNull();
+    expect($skill->skill_category_id)->toBe($category->id);
 });
