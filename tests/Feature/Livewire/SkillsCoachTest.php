@@ -23,8 +23,8 @@ it('displays welcome message when no messages exist', function () {
 
     Livewire::actingAs($user)
         ->test(SkillsCoach::class)
-        ->assertSee('Welcome to Skills Coach')
-        ->assertSee('Ask me anything about your skills');
+        ->assertSee('your Skills Coach')
+        ->assertSee('skills to learn');
 });
 
 it('can send a message and receive a response', function () {
@@ -69,7 +69,7 @@ it('can clear chat messages', function () {
 
     $component->call('clearChat')
         ->assertDontSee('Test message')
-        ->assertSee('Welcome to Skills Coach');
+        ->assertSee('your Skills Coach');
 });
 
 it('shows homepage link with skills coach button', function () {
