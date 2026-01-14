@@ -8,12 +8,14 @@ use App\Livewire\Admin\UserSkillsEditor;
 use App\Livewire\Admin\UserSkillsManager;
 use App\Livewire\HomePage;
 use App\Livewire\PlaySpace;
+use App\Livewire\SkillsCoach;
 use Illuminate\Support\Facades\Route;
 
 require __DIR__.'/sso-auth.php';
 
 Route::middleware('auth')->group(function () {
     Route::get('/', HomePage::class)->name('home');
+    Route::get('/coach', SkillsCoach::class)->name('coach');
     Route::get('/play', PlaySpace::class)->name('play');
 
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
