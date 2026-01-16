@@ -18,7 +18,7 @@ class GetTrendingSkills extends Tool
 
     public function __invoke(int $limit = 10): string
     {
-        $trending = Skill::getTrendingSkills($limit);
+        $trending = Skill::getTrendingSkills(limit: $limit);
 
         $results = $trending->map(fn ($s) => [
             'name' => $s->name,
