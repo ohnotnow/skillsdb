@@ -32,4 +32,5 @@ npm-debug.log
 yarn-error.log
 PROJECT_PLAN.md
 example-simple-spout.txt
-
+storage/debugbar/
+prism*

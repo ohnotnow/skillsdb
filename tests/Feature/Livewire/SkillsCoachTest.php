@@ -5,15 +5,9 @@ use App\Livewire\SkillsCoach;
 use App\Models\CoachConversation;
 use App\Models\CoachMessage;
 use App\Models\User;
-use App\Services\SkillsCoach\Contracts\LlmProvider;
 use Livewire\Livewire;
-use Tests\Fakes\FakeLlmProvider;
-
-beforeEach(function () {
-    // Use fake LLM provider for all tests
-    $this->fakeLlm = new FakeLlmProvider;
-    app()->instance(LlmProvider::class, $this->fakeLlm);
-});
+use Prism\Prism\Facades\Prism;
+use Prism\Prism\Testing\TextResponseFake;
 
 it('can view the skills coach page', function () {
     $user = User::factory()->create();
@@ -41,7 +35,9 @@ it('displays welcome message when no messages exist', function () {
 it('can send a message and receive a response', function () {
     $user = User::factory()->create();
 
-    $this->fakeLlm->setResponse('I recommend learning Docker next.');
+    Prism::fake([
+        TextResponseFake::make()->withText('I recommend learning Docker next.'),
+    ]);
 
     Livewire::actingAs($user)
         ->test(SkillsCoach::class)
@@ -55,7 +51,9 @@ it('can send a message and receive a response', function () {
 it('persists messages to the database', function () {
     $user = User::factory()->create();
 
-    $this->fakeLlm->setResponse('Great question about Python!');
+    Prism::fake([
+        TextResponseFake::make()->withText('Great question about Python!'),
+    ]);
 
     Livewire::actingAs($user)
         ->test(SkillsCoach::class)
@@ -109,7 +107,9 @@ it('validates that prompt is not too long', function () {
 it('can clear chat and start new conversation', function () {
     $user = User::factory()->create();
 
-    $this->fakeLlm->setResponse('Test response');
+    Prism::fake([
+        TextResponseFake::make()->withText('Test response'),
+    ]);
 
     $component = Livewire::actingAs($user)
         ->test(SkillsCoach::class)
