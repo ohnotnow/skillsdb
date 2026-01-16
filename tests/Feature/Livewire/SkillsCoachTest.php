@@ -1,8 +1,19 @@
 <?php
 
+use App\Enums\CoachMessageRole;
 use App\Livewire\SkillsCoach;
+use App\Models\CoachConversation;
+use App\Models\CoachMessage;
 use App\Models\User;
+use App\Services\SkillsCoach\Contracts\LlmProvider;
 use Livewire\Livewire;
+use Tests\Fakes\FakeLlmProvider;
+
+beforeEach(function () {
+    // Use fake LLM provider for all tests
+    $this->fakeLlm = new FakeLlmProvider;
+    app()->instance(LlmProvider::class, $this->fakeLlm);
+});
 
 it('can view the skills coach page', function () {
     $user = User::factory()->create();
@@ -30,12 +41,49 @@ it('displays welcome message when no messages exist', function () {
 it('can send a message and receive a response', function () {
     $user = User::factory()->create();
 
+    $this->fakeLlm->setResponse('I recommend learning Docker next.');
+
     Livewire::actingAs($user)
         ->test(SkillsCoach::class)
         ->set('prompt', 'What skills should I learn?')
         ->call('send')
         ->assertSet('prompt', '')
-        ->assertSee('What skills should I learn?');
+        ->assertSee('What skills should I learn?')
+        ->assertSee('I recommend learning Docker next.');
+});
+
+it('persists messages to the database', function () {
+    $user = User::factory()->create();
+
+    $this->fakeLlm->setResponse('Great question about Python!');
+
+    Livewire::actingAs($user)
+        ->test(SkillsCoach::class)
+        ->set('prompt', 'Tell me about Python')
+        ->call('send');
+
+    expect(CoachConversation::where('user_id', $user->id)->count())->toBe(1);
+    expect(CoachMessage::count())->toBe(2); // User message + assistant response
+});
+
+it('loads existing conversation on mount', function () {
+    $user = User::factory()->create();
+    $conversation = CoachConversation::factory()->create(['user_id' => $user->id]);
+    CoachMessage::factory()->create([
+        'coach_conversation_id' => $conversation->id,
+        'role' => CoachMessageRole::User,
+        'content' => 'Previous question',
+    ]);
+    CoachMessage::factory()->create([
+        'coach_conversation_id' => $conversation->id,
+        'role' => CoachMessageRole::Assistant,
+        'content' => 'Previous answer',
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(SkillsCoach::class)
+        ->assertSee('Previous question')
+        ->assertSee('Previous answer');
 });
 
 it('validates that prompt is required', function () {
@@ -58,8 +106,10 @@ it('validates that prompt is not too long', function () {
         ->assertHasErrors(['prompt' => 'max']);
 });
 
-it('can clear chat messages', function () {
+it('can clear chat and start new conversation', function () {
     $user = User::factory()->create();
+
+    $this->fakeLlm->setResponse('Test response');
 
     $component = Livewire::actingAs($user)
         ->test(SkillsCoach::class)
@@ -67,9 +117,15 @@ it('can clear chat messages', function () {
         ->call('send')
         ->assertSee('Test message');
 
+    $originalConversationId = $component->get('conversationId');
+
     $component->call('clearChat')
         ->assertDontSee('Test message')
         ->assertSee('your Skills Coach');
+
+    // Should have created a new conversation
+    expect($component->get('conversationId'))->not->toBe($originalConversationId);
+    expect(CoachConversation::where('user_id', $user->id)->count())->toBe(2);
 });
 
 it('shows homepage link with skills coach button', function () {

@@ -26,6 +26,7 @@ class User extends Authenticatable
         'email',
         'password',
         'last_updated_skills_at',
+        'coach_contactable',
     ];
 
     protected $hidden = [
@@ -41,6 +42,7 @@ class User extends Authenticatable
             'is_staff' => 'boolean',
             'is_admin' => 'boolean',
             'last_updated_skills_at' => 'datetime',
+            'coach_contactable' => 'boolean',
         ];
     }
 
@@ -57,6 +59,11 @@ class User extends Authenticatable
     public function skillHistory(): HasMany
     {
         return $this->hasMany(SkillHistory::class)->latest('id');
+    }
+
+    public function coachConversations(): HasMany
+    {
+        return $this->hasMany(CoachConversation::class)->latest();
     }
 
     // Accessors

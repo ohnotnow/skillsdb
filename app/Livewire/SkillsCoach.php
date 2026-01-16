@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Models\CoachConversation;
+use App\Services\SkillsCoach\CoachService;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -12,41 +14,70 @@ class SkillsCoach extends Component
 
     public array $messages = [];
 
-    public function send(): void
+    public ?int $conversationId = null;
+
+    public function mount(): void
+    {
+        $this->loadConversation();
+    }
+
+    public function send(CoachService $coach): void
     {
         $this->validate([
             'prompt' => ['required', 'string', 'max:1000'],
         ]);
 
+        $user = auth()->user();
+        $conversation = $this->conversationId
+            ? CoachConversation::find($this->conversationId)
+            : null;
+
+        // Add user message to UI immediately
         $this->messages[] = [
             'role' => 'user',
             'content' => $this->prompt,
         ];
 
+        $prompt = $this->prompt;
+        $this->reset('prompt');
+
+        // Get response from coach (this persists both messages)
+        $response = $coach->chat($user, $prompt, $conversation);
+
+        // Update conversation ID if this was a new conversation
+        $this->conversationId = $response->conversation->id;
+
+        // Add assistant response to UI
         $this->messages[] = [
             'role' => 'assistant',
-            'content' => $this->generateFakeResponse(),
+            'content' => $response->content,
         ];
-
-        $this->reset('prompt');
     }
 
-    public function clearChat(): void
+    public function clearChat(CoachService $coach): void
     {
+        $user = auth()->user();
+        $conversation = $coach->startNewConversation($user);
+        $this->conversationId = $conversation->id;
         $this->reset('messages');
     }
 
-    protected function generateFakeResponse(): string
+    protected function loadConversation(): void
     {
-        $responses = [
-            'Based on your current skills, you might want to explore some complementary technologies that could enhance your expertise.',
-            "Great question! To level up in that area, I'd recommend focusing on hands-on practice and real-world projects.",
-            'I notice you have some strong foundational skills. Have you considered building on those with more advanced techniques?',
-            "That's an interesting area to explore. Many professionals find that combining theoretical knowledge with practical application works best.",
-            "Good thinking! Skill development is a journey, and it's great that you're being proactive about your growth.",
-        ];
+        $user = auth()->user();
+        $conversation = $user->coachConversations()->first();
 
-        return $responses[array_rand($responses)];
+        if ($conversation) {
+            $this->conversationId = $conversation->id;
+            $this->messages = $conversation->messages()
+                ->oldest()
+                ->get()
+                ->map(fn ($m) => [
+                    'role' => $m->role->value,
+                    'content' => $m->content,
+                ])
+                ->toArray();
+        }
     }
 
     public function render()
