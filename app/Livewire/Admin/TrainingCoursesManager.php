@@ -18,26 +18,20 @@ class TrainingCoursesManager extends Component
     #[Url]
     public $search = '';
 
-    public ?int $editingCourseId = null;
-
-    public string $courseName = '';
-
-    public string $courseDescription = '';
-
-    public string $coursePrerequisites = '';
-
-    public $courseCost = '';
-
-    public bool $courseOffersCertification = false;
-
-    public $courseSupplier = '';
+    public array $editingCourse = [
+        'id' => null,
+        'name' => '',
+        'description' => '',
+        'prerequisites' => '',
+        'cost' => '',
+        'offers_certification' => false,
+        'training_supplier_id' => '',
+        'skill_ids' => [],
+    ];
 
     public string $supplierSearchTerm = '';
 
     public string $skillSearchTerm = '';
-
-    /** @var array<int> */
-    public array $courseSkillIds = [];
 
     public ?int $deletingCourseId = null;
 
@@ -90,18 +84,7 @@ class TrainingCoursesManager extends Component
 
     public function openCreateModal(): void
     {
-        $this->reset([
-            'editingCourseId',
-            'courseName',
-            'courseDescription',
-            'coursePrerequisites',
-            'courseCost',
-            'courseOffersCertification',
-            'courseSupplier',
-            'supplierSearchTerm',
-            'skillSearchTerm',
-            'courseSkillIds',
-        ]);
+        $this->reset('editingCourse', 'supplierSearchTerm', 'skillSearchTerm');
 
         Flux::modal('course-modal')->show();
     }
@@ -109,16 +92,12 @@ class TrainingCoursesManager extends Component
     public function openEditModal(int $courseId): void
     {
         $course = TrainingCourse::with('skills')->findOrFail($courseId);
-        $this->editingCourseId = $course->id;
-        $this->courseName = $course->name;
-        $this->courseDescription = $course->description ?? '';
-        $this->coursePrerequisites = $course->prerequisites ?? '';
-        $this->courseCost = $course->cost ?? '';
-        $this->courseOffersCertification = $course->offers_certification;
-        $this->courseSupplier = $course->training_supplier_id ? (string) $course->training_supplier_id : '';
-        $this->supplierSearchTerm = '';
-        $this->skillSearchTerm = '';
-        $this->courseSkillIds = $course->skills->pluck('id')->toArray();
+
+        $this->editingCourse = $course->toArray();
+        $this->editingCourse['training_supplier_id'] = (string) $course->training_supplier_id;
+        $this->editingCourse['skill_ids'] = $course->skills->pluck('id')->toArray();
+
+        $this->reset('supplierSearchTerm', 'skillSearchTerm');
 
         Flux::modal('course-modal')->show();
     }
@@ -133,7 +112,7 @@ class TrainingCoursesManager extends Component
 
         $supplier = TrainingSupplier::create(['name' => $name]);
 
-        $this->courseSupplier = (string) $supplier->id;
+        $this->editingCourse['training_supplier_id'] = (string) $supplier->id;
         $this->supplierSearchTerm = '';
         unset($this->filteredSupplierOptions);
 
@@ -143,32 +122,32 @@ class TrainingCoursesManager extends Component
     public function saveCourse(): void
     {
         $this->validate([
-            'courseName' => [
+            'editingCourse.name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('training_courses', 'name')->ignore($this->editingCourseId),
+                Rule::unique('training_courses', 'name')->ignore($this->editingCourse['id']),
             ],
-            'courseDescription' => ['nullable', 'string', 'max:5000'],
-            'coursePrerequisites' => ['nullable', 'string', 'max:2000'],
-            'courseCost' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
-            'courseOffersCertification' => ['boolean'],
-            'courseSupplier' => ['nullable', 'exists:training_suppliers,id'],
-            'courseSkillIds' => ['array'],
-            'courseSkillIds.*' => ['exists:skills,id'],
+            'editingCourse.description' => ['nullable', 'string', 'max:5000'],
+            'editingCourse.prerequisites' => ['nullable', 'string', 'max:2000'],
+            'editingCourse.cost' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'editingCourse.offers_certification' => ['boolean'],
+            'editingCourse.training_supplier_id' => ['nullable', 'exists:training_suppliers,id'],
+            'editingCourse.skill_ids' => ['array'],
+            'editingCourse.skill_ids.*' => ['exists:skills,id'],
         ]);
 
         $data = [
-            'name' => $this->courseName,
-            'description' => $this->courseDescription ?: null,
-            'prerequisites' => $this->coursePrerequisites ?: null,
-            'cost' => $this->courseCost !== '' ? $this->courseCost : null,
-            'offers_certification' => $this->courseOffersCertification,
-            'training_supplier_id' => $this->courseSupplier ?: null,
+            'name' => $this->editingCourse['name'],
+            'description' => $this->editingCourse['description'] ?: null,
+            'prerequisites' => $this->editingCourse['prerequisites'] ?: null,
+            'cost' => $this->editingCourse['cost'] !== '' ? $this->editingCourse['cost'] : null,
+            'offers_certification' => $this->editingCourse['offers_certification'],
+            'training_supplier_id' => $this->editingCourse['training_supplier_id'] ?: null,
         ];
 
-        if ($this->editingCourseId) {
-            $course = TrainingCourse::findOrFail($this->editingCourseId);
+        if ($this->editingCourse['id']) {
+            $course = TrainingCourse::findOrFail($this->editingCourse['id']);
             $course->update($data);
             $message = 'Course updated.';
         } else {
@@ -176,7 +155,7 @@ class TrainingCoursesManager extends Component
             $message = 'Course created.';
         }
 
-        $course->skills()->sync($this->courseSkillIds);
+        $course->skills()->sync($this->editingCourse['skill_ids']);
 
         unset($this->courses);
 

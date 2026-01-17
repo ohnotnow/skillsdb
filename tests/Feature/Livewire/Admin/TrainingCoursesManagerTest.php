@@ -75,14 +75,14 @@ it('can create a new course', function () {
     Livewire::actingAs($admin)
         ->test(TrainingCoursesManager::class)
         ->call('openCreateModal')
-        ->assertSet('editingCourseId', null)
-        ->set('courseName', 'Docker Mastery')
-        ->set('courseDescription', 'Learn Docker from scratch')
-        ->set('coursePrerequisites', 'Basic Linux knowledge')
-        ->set('courseCost', '99.99')
-        ->set('courseOffersCertification', true)
-        ->set('courseSupplier', $supplier->id)
-        ->set('courseSkillIds', [$skill->id])
+        ->assertSet('editingCourse.id', null)
+        ->set('editingCourse.name', 'Docker Mastery')
+        ->set('editingCourse.description', 'Learn Docker from scratch')
+        ->set('editingCourse.prerequisites', 'Basic Linux knowledge')
+        ->set('editingCourse.cost', '99.99')
+        ->set('editingCourse.offers_certification', true)
+        ->set('editingCourse.training_supplier_id', $supplier->id)
+        ->set('editingCourse.skill_ids', [$skill->id])
         ->call('saveCourse')
         ->assertHasNoErrors();
 
@@ -102,8 +102,8 @@ it('can create a free course', function () {
     Livewire::actingAs($admin)
         ->test(TrainingCoursesManager::class)
         ->call('openCreateModal')
-        ->set('courseName', 'Free Course')
-        ->set('courseCost', '')
+        ->set('editingCourse.name', 'Free Course')
+        ->set('editingCourse.cost', '')
         ->call('saveCourse')
         ->assertHasNoErrors();
 
@@ -119,9 +119,9 @@ it('validates required fields when creating a course', function () {
     Livewire::actingAs($admin)
         ->test(TrainingCoursesManager::class)
         ->call('openCreateModal')
-        ->set('courseName', '')
+        ->set('editingCourse.name', '')
         ->call('saveCourse')
-        ->assertHasErrors(['courseName']);
+        ->assertHasErrors(['editingCourse.name']);
 
     expect(TrainingCourse::count())->toBe(0);
 });
@@ -133,9 +133,9 @@ it('prevents duplicate course names', function () {
     Livewire::actingAs($admin)
         ->test(TrainingCoursesManager::class)
         ->call('openCreateModal')
-        ->set('courseName', 'AWS Course')
+        ->set('editingCourse.name', 'AWS Course')
         ->call('saveCourse')
-        ->assertHasErrors(['courseName']);
+        ->assertHasErrors(['editingCourse.name']);
 });
 
 it('validates cost is a valid number', function () {
@@ -144,10 +144,10 @@ it('validates cost is a valid number', function () {
     Livewire::actingAs($admin)
         ->test(TrainingCoursesManager::class)
         ->call('openCreateModal')
-        ->set('courseName', 'Test Course')
-        ->set('courseCost', 'invalid')
+        ->set('editingCourse.name', 'Test Course')
+        ->set('editingCourse.cost', 'invalid')
         ->call('saveCourse')
-        ->assertHasErrors(['courseCost']);
+        ->assertHasErrors(['editingCourse.cost']);
 
     expect(TrainingCourse::count())->toBe(0);
 });
@@ -163,11 +163,11 @@ it('can edit a course', function () {
     Livewire::actingAs($admin)
         ->test(TrainingCoursesManager::class)
         ->call('openEditModal', $course->id)
-        ->assertSet('editingCourseId', $course->id)
-        ->assertSet('courseName', 'Old Name')
-        ->set('courseName', 'New Name')
-        ->set('courseDescription', 'New description')
-        ->set('courseSupplier', $newSupplier->id)
+        ->assertSet('editingCourse.id', $course->id)
+        ->assertSet('editingCourse.name', 'Old Name')
+        ->set('editingCourse.name', 'New Name')
+        ->set('editingCourse.description', 'New description')
+        ->set('editingCourse.training_supplier_id', $newSupplier->id)
         ->call('saveCourse')
         ->assertHasNoErrors();
 
@@ -184,7 +184,7 @@ it('allows editing a course to keep its own name', function () {
     Livewire::actingAs($admin)
         ->test(TrainingCoursesManager::class)
         ->call('openEditModal', $course->id)
-        ->set('courseDescription', 'Updated description')
+        ->set('editingCourse.description', 'Updated description')
         ->call('saveCourse')
         ->assertHasNoErrors();
 
@@ -201,8 +201,8 @@ it('can update course skills', function () {
     Livewire::actingAs($admin)
         ->test(TrainingCoursesManager::class)
         ->call('openEditModal', $course->id)
-        ->assertSet('courseSkillIds', [$skill1->id])
-        ->set('courseSkillIds', [$skill2->id])
+        ->assertSet('editingCourse.skill_ids', [$skill1->id])
+        ->set('editingCourse.skill_ids', [$skill2->id])
         ->call('saveCourse')
         ->assertHasNoErrors();
 

@@ -93,28 +93,28 @@
         <form wire:submit="saveCourse">
             <div class="space-y-6">
                 <div>
-                    <flux:heading size="lg">{{ $editingCourseId ? 'Edit Course' : 'Add New Course' }}</flux:heading>
+                    <flux:heading size="lg">{{ $editingCourse['id'] ? 'Edit Course' : 'Add New Course' }}</flux:heading>
                     <flux:text class="mt-2">
-                        {{ $editingCourseId ? 'Update the course details.' : 'Add a new training course to the system.' }}
+                        {{ $editingCourse['id'] ? 'Update the course details.' : 'Add a new training course to the system.' }}
                     </flux:text>
                 </div>
 
                 <div class="space-y-4">
-                    <flux:input wire:model="courseName" label="Course Name" placeholder="e.g., AWS Solutions Architect" />
+                    <flux:input wire:model="editingCourse.name" label="Course Name" placeholder="e.g., AWS Solutions Architect" />
 
-                    <flux:textarea wire:model="courseDescription" label="Description" placeholder="Brief description of the course..." rows="3" />
+                    <flux:textarea wire:model="editingCourse.description" label="Description" placeholder="Brief description of the course..." rows="3" />
 
-                    <flux:textarea wire:model="coursePrerequisites" label="Prerequisites" placeholder="Any prior knowledge or skills required..." rows="2" />
+                    <flux:textarea wire:model="editingCourse.prerequisites" label="Prerequisites" placeholder="Any prior knowledge or skills required..." rows="2" />
 
                     <div class="grid grid-cols-2 gap-4">
-                        <flux:input wire:model="courseCost" label="Cost" type="number" step="0.01" min="0" placeholder="0.00" description="Leave blank for free courses" />
+                        <flux:input wire:model="editingCourse.cost" label="Cost" type="number" step="0.01" min="0" placeholder="0.00" description="Leave blank for free courses" />
 
-                        <flux:switch wire:model="courseOffersCertification" label="Offers certification" />
+                        <flux:switch wire:model="editingCourse.offers_certification" label="Offers certification" />
                     </div>
 
                     <flux:field>
                         <flux:label>Supplier</flux:label>
-                        <flux:select wire:model="courseSupplier" variant="combobox" placeholder="Select or create supplier..." :filter="false" clearable>
+                        <flux:select wire:model="editingCourse.training_supplier_id" variant="combobox" placeholder="Select or create supplier..." :filter="false" clearable>
                             <x-slot name="input">
                                 <flux:select.input wire:model.live="supplierSearchTerm" placeholder="Search or create..." />
                             </x-slot>
@@ -127,10 +127,10 @@
                                 Create "<span wire:text="supplierSearchTerm"></span>"
                             </flux:select.option.create>
                         </flux:select>
-                        <flux:error name="courseSupplier" />
+                        <flux:error name="editingCourse.training_supplier_id" />
                     </flux:field>
 
-                    <flux:pillbox wire:model="courseSkillIds" label="Related Skills" variant="combobox" multiple>
+                    <flux:pillbox wire:model="editingCourse.skill_ids" label="Related Skills" variant="combobox" multiple>
                         <x-slot name="input">
                             <flux:pillbox.input wire:model.live="skillSearchTerm" placeholder="Search skills..." />
                         </x-slot>
@@ -143,8 +143,8 @@
                 </div>
 
                 <div class="flex justify-end gap-3">
-                    <flux:button type="button" variant="ghost" wire:click="closeCourseModal">Cancel</flux:button>
-                    <flux:button type="submit" variant="primary">{{ $editingCourseId ? 'Update Course' : 'Create Course' }}</flux:button>
+                    <flux:button type="button" variant="ghost" x-on:click="$flux.modal('course-modal').close()">Cancel</flux:button>
+                    <flux:button type="submit" variant="primary">{{ $editingCourse['id'] ? 'Update Course' : 'Create Course' }}</flux:button>
                 </div>
             </div>
         </form>
