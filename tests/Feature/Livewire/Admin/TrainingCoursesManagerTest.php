@@ -75,7 +75,6 @@ it('can create a new course', function () {
     Livewire::actingAs($admin)
         ->test(TrainingCoursesManager::class)
         ->call('openCreateModal')
-        ->assertSet('showCourseModal', true)
         ->assertSet('editingCourseId', null)
         ->set('courseName', 'Docker Mastery')
         ->set('courseDescription', 'Learn Docker from scratch')
@@ -85,7 +84,6 @@ it('can create a new course', function () {
         ->set('courseSupplier', $supplier->id)
         ->set('courseSkillIds', [$skill->id])
         ->call('saveCourse')
-        ->assertSet('showCourseModal', false)
         ->assertHasNoErrors();
 
     $course = TrainingCourse::where('name', 'Docker Mastery')->first();
@@ -165,14 +163,12 @@ it('can edit a course', function () {
     Livewire::actingAs($admin)
         ->test(TrainingCoursesManager::class)
         ->call('openEditModal', $course->id)
-        ->assertSet('showCourseModal', true)
         ->assertSet('editingCourseId', $course->id)
         ->assertSet('courseName', 'Old Name')
         ->set('courseName', 'New Name')
         ->set('courseDescription', 'New description')
         ->set('courseSupplier', $newSupplier->id)
         ->call('saveCourse')
-        ->assertSet('showCourseModal', false)
         ->assertHasNoErrors();
 
     $course->refresh();

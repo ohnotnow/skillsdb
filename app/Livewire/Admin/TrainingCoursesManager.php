@@ -18,9 +18,6 @@ class TrainingCoursesManager extends Component
     #[Url]
     public $search = '';
 
-    // Course Create/Edit modal state
-    public bool $showCourseModal = false;
-
     public ?int $editingCourseId = null;
 
     public string $courseName = '';
@@ -42,7 +39,6 @@ class TrainingCoursesManager extends Component
     /** @var array<int> */
     public array $courseSkillIds = [];
 
-    // Course Delete confirmation
     public ?int $deletingCourseId = null;
 
     #[Computed]
@@ -60,18 +56,6 @@ class TrainingCoursesManager extends Component
             })
             ->orderBy('name')
             ->get();
-    }
-
-    #[Computed]
-    public function suppliers()
-    {
-        return TrainingSupplier::orderBy('name')->get();
-    }
-
-    #[Computed]
-    public function skills()
-    {
-        return Skill::approved()->orderBy('name')->get();
     }
 
     #[Computed]
@@ -118,7 +102,8 @@ class TrainingCoursesManager extends Component
             'skillSearchTerm',
             'courseSkillIds',
         ]);
-        $this->showCourseModal = true;
+
+        Flux::modal('course-modal')->show();
     }
 
     public function openEditModal(int $courseId): void
@@ -134,12 +119,8 @@ class TrainingCoursesManager extends Component
         $this->supplierSearchTerm = '';
         $this->skillSearchTerm = '';
         $this->courseSkillIds = $course->skills->pluck('id')->toArray();
-        $this->showCourseModal = true;
-    }
 
-    public function closeCourseModal(): void
-    {
-        $this->showCourseModal = false;
+        Flux::modal('course-modal')->show();
     }
 
     public function createSupplierInline(): void
@@ -154,9 +135,9 @@ class TrainingCoursesManager extends Component
 
         $this->courseSupplier = (string) $supplier->id;
         $this->supplierSearchTerm = '';
-        unset($this->suppliers, $this->filteredSupplierOptions);
+        unset($this->filteredSupplierOptions);
 
-        Flux::toast(heading: 'Supplier created.', text: '', variant: 'success');
+        Flux::toast('Supplier created.', variant: 'success');
     }
 
     public function saveCourse(): void
@@ -197,10 +178,10 @@ class TrainingCoursesManager extends Component
 
         $course->skills()->sync($this->courseSkillIds);
 
-        $this->closeCourseModal();
         unset($this->courses);
 
-        Flux::toast(heading: $message, text: '', variant: 'success');
+        Flux::modal('course-modal')->close();
+        Flux::toast($message, variant: 'success');
     }
 
     public function confirmDelete(int $courseId): void
@@ -219,13 +200,12 @@ class TrainingCoursesManager extends Component
             return;
         }
 
-        $course = TrainingCourse::findOrFail($this->deletingCourseId);
-        $course->delete();
+        TrainingCourse::findOrFail($this->deletingCourseId)->delete();
 
         $this->deletingCourseId = null;
         unset($this->courses);
 
-        Flux::toast(heading: 'Course deleted.', text: '', variant: 'success');
+        Flux::toast('Course deleted.', variant: 'success');
     }
 
     public function render()

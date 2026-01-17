@@ -89,7 +89,7 @@
     @endif
 
     {{-- Create/Edit Course Modal --}}
-    <flux:modal wire:model="showCourseModal" variant="flyout">
+    <flux:modal name="course-modal" variant="flyout">
         <form wire:submit="saveCourse">
             <div class="space-y-6">
                 <div>
@@ -151,7 +151,7 @@
     </flux:modal>
 
     {{-- Delete Course Confirmation Modal --}}
-    <flux:modal wire:model="deletingCourseId" class="max-w-md">
+    <flux:modal wire:model.self="deletingCourseId" class="max-w-md">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">Delete Course</flux:heading>
