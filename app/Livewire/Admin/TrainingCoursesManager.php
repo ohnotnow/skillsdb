@@ -18,6 +18,9 @@ class TrainingCoursesManager extends Component
     #[Url]
     public $search = '';
 
+    #[Url]
+    public $showInactive = false;
+
     public array $editingCourse = [
         'id' => null,
         'name' => '',
@@ -33,14 +36,13 @@ class TrainingCoursesManager extends Component
 
     public string $skillSearchTerm = '';
 
-    public ?int $deletingCourseId = null;
-
     #[Computed]
     public function courses()
     {
         return TrainingCourse::query()
             ->with(['supplier', 'skills', 'users'])
             ->withCount(['skills', 'users'])
+            ->when(! $this->showInactive, fn ($query) => $query->active())
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
                     $q->where('name', 'like', "%{$this->search}%")
@@ -148,28 +150,22 @@ class TrainingCoursesManager extends Component
         Flux::toast('Saved.', variant: 'success');
     }
 
-    public function confirmDelete(int $courseId): void
+    public function deactivateCourse(int $courseId): void
     {
-        $this->deletingCourseId = $courseId;
-    }
+        TrainingCourse::findOrFail($courseId)->update(['is_active' => false]);
 
-    public function cancelDelete(): void
-    {
-        $this->deletingCourseId = null;
-    }
-
-    public function deleteCourse(): void
-    {
-        if (! $this->deletingCourseId) {
-            return;
-        }
-
-        TrainingCourse::findOrFail($this->deletingCourseId)->delete();
-
-        $this->deletingCourseId = null;
         unset($this->courses);
 
-        Flux::toast('Course deleted.', variant: 'success');
+        Flux::toast('Course deactivated.', variant: 'success');
+    }
+
+    public function reactivateCourse(int $courseId): void
+    {
+        TrainingCourse::findOrFail($courseId)->update(['is_active' => true]);
+
+        unset($this->courses);
+
+        Flux::toast('Course reactivated.', variant: 'success');
     }
 
     public function render()

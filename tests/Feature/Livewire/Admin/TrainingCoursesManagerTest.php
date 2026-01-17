@@ -194,48 +194,15 @@ it('can update course skills', function () {
     expect($course->fresh()->skills->pluck('id')->toArray())->toBe([$skill2->id]);
 });
 
-it('can delete a course', function () {
+it('can deactivate a course', function () {
     $admin = User::factory()->admin()->create();
     $course = TrainingCourse::factory()->create(['name' => 'Test Course']);
 
     Livewire::actingAs($admin)
         ->test(TrainingCoursesManager::class)
-        ->call('confirmDelete', $course->id)
-        ->assertSet('deletingCourseId', $course->id)
-        ->call('deleteCourse');
+        ->call('deactivateCourse', $course->id);
 
-    expect(TrainingCourse::find($course->id))->toBeNull();
-});
-
-it('can cancel delete', function () {
-    $admin = User::factory()->admin()->create();
-    $course = TrainingCourse::factory()->create(['name' => 'Test Course']);
-
-    Livewire::actingAs($admin)
-        ->test(TrainingCoursesManager::class)
-        ->call('confirmDelete', $course->id)
-        ->assertSet('deletingCourseId', $course->id)
-        ->call('cancelDelete')
-        ->assertSet('deletingCourseId', null);
-
-    expect(TrainingCourse::find($course->id))->not->toBeNull();
-});
-
-it('removes skill associations when course is deleted', function () {
-    $admin = User::factory()->admin()->create();
-    $course = TrainingCourse::factory()->create(['name' => 'Test Course']);
-    $skill = Skill::factory()->approved()->create(['name' => 'Docker']);
-    $course->skills()->attach($skill->id);
-
-    expect($course->skills)->toHaveCount(1);
-
-    Livewire::actingAs($admin)
-        ->test(TrainingCoursesManager::class)
-        ->call('confirmDelete', $course->id)
-        ->call('deleteCourse');
-
-    expect(TrainingCourse::find($course->id))->toBeNull();
-    expect($skill->fresh()->trainingCourses)->toHaveCount(0);
+    expect($course->fresh()->is_active)->toBeFalse();
 });
 
 it('can create a supplier inline', function () {
@@ -316,4 +283,40 @@ it('displays supplier name in table', function () {
         ->test(TrainingCoursesManager::class)
         ->assertSee('Test Course')
         ->assertSee('Pluralsight');
+});
+
+it('can reactivate an inactive course', function () {
+    $admin = User::factory()->admin()->create();
+    $course = TrainingCourse::factory()->inactive()->create(['name' => 'Inactive Course']);
+
+    Livewire::actingAs($admin)
+        ->test(TrainingCoursesManager::class)
+        ->set('showInactive', true)
+        ->call('reactivateCourse', $course->id);
+
+    expect($course->fresh()->is_active)->toBeTrue();
+});
+
+it('hides inactive courses by default', function () {
+    $admin = User::factory()->admin()->create();
+    TrainingCourse::factory()->create(['name' => 'Active Course']);
+    TrainingCourse::factory()->inactive()->create(['name' => 'Inactive Course']);
+
+    Livewire::actingAs($admin)
+        ->test(TrainingCoursesManager::class)
+        ->assertSee('Active Course')
+        ->assertDontSee('Inactive Course');
+});
+
+it('shows inactive courses when filter is enabled', function () {
+    $admin = User::factory()->admin()->create();
+    TrainingCourse::factory()->create(['name' => 'Active Course']);
+    TrainingCourse::factory()->inactive()->create(['name' => 'Inactive Course']);
+
+    Livewire::actingAs($admin)
+        ->test(TrainingCoursesManager::class)
+        ->set('showInactive', true)
+        ->assertSee('Active Course')
+        ->assertSee('Inactive Course')
+        ->assertSee('Inactive');
 });

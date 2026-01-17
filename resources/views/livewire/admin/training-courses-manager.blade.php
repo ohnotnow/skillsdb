@@ -4,12 +4,15 @@
     </div>
 
     <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-end justify-between mb-6">
-        <div class="w-full sm:max-w-sm">
-            <flux:input
-                wire:model.live.debounce.300ms="search"
-                placeholder="Search courses..."
-                icon="magnifying-glass"
-            />
+        <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div class="w-full sm:w-64">
+                <flux:input
+                    wire:model.live.debounce.300ms="search"
+                    placeholder="Search courses..."
+                    icon="magnifying-glass"
+                />
+            </div>
+            <flux:switch wire:model.live="showInactive" label="Show inactive" />
         </div>
         <flux:button wire:click="openCreateModal" icon="plus">
             Add Course
@@ -31,7 +34,10 @@
                 @foreach ($this->courses as $course)
                     <flux:table.row wire:key="course-{{ $course->id }}">
                         <flux:table.cell class="font-medium">
-                            {{ $course->name }}
+                            <span @class(['opacity-60' => ! $course->is_active])>{{ $course->name }}</span>
+                            @unless ($course->is_active)
+                                <flux:badge color="zinc" size="sm" class="ml-2">Inactive</flux:badge>
+                            @endunless
                         </flux:table.cell>
                         <flux:table.cell class="hidden md:table-cell">
                             {{ $course->supplier?->name ?? '-' }}
@@ -64,9 +70,15 @@
                                         Edit
                                     </flux:menu.item>
                                     <flux:menu.separator />
-                                    <flux:menu.item variant="danger" icon="trash" wire:click="confirmDelete({{ $course->id }})">
-                                        Delete
-                                    </flux:menu.item>
+                                    @if ($course->is_active)
+                                        <flux:menu.item icon="archive-box" wire:click="deactivateCourse({{ $course->id }})">
+                                            Deactivate
+                                        </flux:menu.item>
+                                    @else
+                                        <flux:menu.item icon="arrow-path" wire:click="reactivateCourse({{ $course->id }})">
+                                            Reactivate
+                                        </flux:menu.item>
+                                    @endif
                                 </flux:menu>
                             </flux:dropdown>
                         </flux:table.cell>
@@ -150,20 +162,4 @@
         </form>
     </flux:modal>
 
-    {{-- Delete Course Confirmation Modal --}}
-    <flux:modal wire:model.self="deletingCourseId" class="max-w-md">
-        <div class="space-y-6">
-            <div>
-                <flux:heading size="lg">Delete Course</flux:heading>
-                <flux:text class="mt-2">
-                    Are you sure you want to delete this course? This will also remove all enrollment records. This action cannot be undone.
-                </flux:text>
-            </div>
-
-            <div class="flex justify-end gap-3">
-                <flux:button variant="ghost" wire:click="cancelDelete">Cancel</flux:button>
-                <flux:button variant="danger" wire:click="deleteCourse">Delete</flux:button>
-            </div>
-        </div>
-    </flux:modal>
 </div>

@@ -20,12 +20,14 @@ class TrainingCourse extends Model
         'cost',
         'offers_certification',
         'training_supplier_id',
+        'is_active',
     ];
 
     protected function casts(): array
     {
         return [
             'offers_certification' => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 
@@ -57,7 +59,19 @@ class TrainingCourse extends Model
             ->withTimestamps();
     }
 
+    // Scopes
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
     // Custom methods
+
+    public function hasEnrollments(): bool
+    {
+        return $this->users()->exists();
+    }
 
     public function isFree(): bool
     {

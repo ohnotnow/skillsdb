@@ -47,4 +47,11 @@ class TrainingCourseFactory extends Factory
             'offers_certification' => true,
         ]);
     }
+
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
+        ]);
+    }
 }
