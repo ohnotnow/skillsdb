@@ -84,7 +84,13 @@ class TrainingCoursesManager extends Component
             ->orderBy('name')
             ->get();
 
-        return $suppliers;
+        $exactMatch = $search && $suppliers->contains(fn ($s) => strtolower($s->name) === strtolower($search));
+
+        return [
+            'suppliers' => $suppliers,
+            'showCreate' => $search && ! $exactMatch,
+            'createName' => $search,
+        ];
     }
 
     #[Computed]

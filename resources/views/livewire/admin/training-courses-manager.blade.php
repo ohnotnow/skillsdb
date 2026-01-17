@@ -112,19 +112,23 @@
                         <flux:switch wire:model="courseOffersCertification" label="Offers certification" />
                     </div>
 
-                    <flux:pillbox wire:model="courseSupplier" label="Supplier" variant="combobox">
-                        <x-slot name="input">
-                            <flux:pillbox.input wire:model.live="supplierSearchTerm" placeholder="Search or create supplier..." />
-                        </x-slot>
+                    <flux:field>
+                        <flux:label>Supplier</flux:label>
+                        <flux:select wire:model="courseSupplier" variant="combobox" placeholder="Select or create supplier..." :filter="false" clearable>
+                            <x-slot name="input">
+                                <flux:select.input wire:model.live="supplierSearchTerm" placeholder="Search or create..." />
+                            </x-slot>
 
-                        @foreach ($this->filteredSupplierOptions as $supplier)
-                            <flux:pillbox.option value="{{ $supplier->id }}" wire:key="supplier-{{ $supplier->id }}">{{ $supplier->name }}</flux:pillbox.option>
-                        @endforeach
+                            @foreach ($this->filteredSupplierOptions['suppliers'] as $supplier)
+                                <flux:select.option value="{{ $supplier->id }}" wire:key="supplier-{{ $supplier->id }}">{{ $supplier->name }}</flux:select.option>
+                            @endforeach
 
-                        <flux:pillbox.option.create wire:click="createSupplierInline" min-length="2">
-                            Create "<span wire:text="supplierSearchTerm"></span>"
-                        </flux:pillbox.option.create>
-                    </flux:pillbox>
+                            <flux:select.option.create wire:click="createSupplierInline" min-length="2">
+                                Create "<span wire:text="supplierSearchTerm"></span>"
+                            </flux:select.option.create>
+                        </flux:select>
+                        <flux:error name="courseSupplier" />
+                    </flux:field>
 
                     <flux:pillbox wire:model="courseSkillIds" label="Related Skills" variant="combobox" multiple>
                         <x-slot name="input">
