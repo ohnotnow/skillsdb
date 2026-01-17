@@ -257,51 +257,28 @@ it('removes skill associations when course is deleted', function () {
     expect($skill->fresh()->trainingCourses)->toHaveCount(0);
 });
 
-it('can create a quick supplier', function () {
+it('can create a supplier inline', function () {
     $admin = User::factory()->admin()->create();
 
     Livewire::actingAs($admin)
         ->test(TrainingCoursesManager::class)
         ->call('openCreateModal')
         ->set('supplierSearchTerm', 'New Training Co')
-        ->call('openQuickSupplierModal')
-        ->assertSet('showQuickSupplierModal', true)
-        ->assertSet('quickSupplierName', 'New Training Co')
-        ->set('quickSupplierWebsite', 'https://newtraining.co')
-        ->call('saveQuickSupplier')
-        ->assertSet('showQuickSupplierModal', false)
+        ->call('createSupplierInline')
         ->assertHasNoErrors();
 
     $supplier = TrainingSupplier::where('name', 'New Training Co')->first();
     expect($supplier)->not->toBeNull();
-    expect($supplier->website)->toBe('https://newtraining.co');
 });
 
-it('validates quick supplier name is required', function () {
+it('does not create supplier inline with empty name', function () {
     $admin = User::factory()->admin()->create();
 
     Livewire::actingAs($admin)
         ->test(TrainingCoursesManager::class)
         ->call('openCreateModal')
-        ->call('openQuickSupplierModal')
-        ->set('quickSupplierName', '')
-        ->call('saveQuickSupplier')
-        ->assertHasErrors(['quickSupplierName']);
-
-    expect(TrainingSupplier::count())->toBe(0);
-});
-
-it('validates quick supplier website is a valid url', function () {
-    $admin = User::factory()->admin()->create();
-
-    Livewire::actingAs($admin)
-        ->test(TrainingCoursesManager::class)
-        ->call('openCreateModal')
-        ->call('openQuickSupplierModal')
-        ->set('quickSupplierName', 'Test Supplier')
-        ->set('quickSupplierWebsite', 'not-a-url')
-        ->call('saveQuickSupplier')
-        ->assertHasErrors(['quickSupplierWebsite']);
+        ->set('supplierSearchTerm', '')
+        ->call('createSupplierInline');
 
     expect(TrainingSupplier::count())->toBe(0);
 });

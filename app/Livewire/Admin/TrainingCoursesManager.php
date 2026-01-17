@@ -37,18 +37,13 @@ class TrainingCoursesManager extends Component
 
     public string $supplierSearchTerm = '';
 
+    public string $skillSearchTerm = '';
+
     /** @var array<int> */
     public array $courseSkillIds = [];
 
     // Course Delete confirmation
     public ?int $deletingCourseId = null;
-
-    // Quick Supplier modal state
-    public bool $showQuickSupplierModal = false;
-
-    public string $quickSupplierName = '';
-
-    public string $quickSupplierWebsite = '';
 
     #[Computed]
     public function courses()
@@ -89,13 +84,18 @@ class TrainingCoursesManager extends Component
             ->orderBy('name')
             ->get();
 
-        $exactMatch = $search && $suppliers->contains(fn ($s) => strtolower($s->name) === strtolower($search));
+        return $suppliers;
+    }
 
-        return [
-            'suppliers' => $suppliers,
-            'showCreate' => $search && ! $exactMatch,
-            'createName' => $search,
-        ];
+    #[Computed]
+    public function filteredSkillOptions()
+    {
+        $search = trim($this->skillSearchTerm);
+
+        return Skill::approved()
+            ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
+            ->orderBy('name')
+            ->get();
     }
 
     public function openCreateModal(): void
@@ -109,6 +109,7 @@ class TrainingCoursesManager extends Component
             'courseOffersCertification',
             'courseSupplier',
             'supplierSearchTerm',
+            'skillSearchTerm',
             'courseSkillIds',
         ]);
         $this->showCourseModal = true;
@@ -125,6 +126,7 @@ class TrainingCoursesManager extends Component
         $this->courseOffersCertification = $course->offers_certification;
         $this->courseSupplier = $course->training_supplier_id ?? '';
         $this->supplierSearchTerm = '';
+        $this->skillSearchTerm = '';
         $this->courseSkillIds = $course->skills->pluck('id')->toArray();
         $this->showCourseModal = true;
     }
@@ -134,33 +136,18 @@ class TrainingCoursesManager extends Component
         $this->showCourseModal = false;
     }
 
-    public function openQuickSupplierModal(): void
+    public function createSupplierInline(): void
     {
-        $this->quickSupplierName = $this->supplierSearchTerm;
-        $this->quickSupplierWebsite = '';
-        $this->showQuickSupplierModal = true;
-    }
+        $name = trim($this->supplierSearchTerm);
 
-    public function closeQuickSupplierModal(): void
-    {
-        $this->showQuickSupplierModal = false;
-    }
+        if (! $name) {
+            return;
+        }
 
-    public function saveQuickSupplier(): void
-    {
-        $this->validate([
-            'quickSupplierName' => ['required', 'string', 'max:255', 'unique:training_suppliers,name'],
-            'quickSupplierWebsite' => ['nullable', 'url', 'max:255'],
-        ]);
-
-        $supplier = TrainingSupplier::create([
-            'name' => $this->quickSupplierName,
-            'website' => $this->quickSupplierWebsite ?: null,
-        ]);
+        $supplier = TrainingSupplier::create(['name' => $name]);
 
         $this->courseSupplier = $supplier->id;
         $this->supplierSearchTerm = '';
-        $this->closeQuickSupplierModal();
         unset($this->suppliers, $this->filteredSupplierOptions);
 
         Flux::toast(heading: 'Supplier created.', text: '', variant: 'success');

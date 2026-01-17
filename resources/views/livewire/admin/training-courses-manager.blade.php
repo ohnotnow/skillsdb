@@ -100,67 +100,42 @@
                 </div>
 
                 <div class="space-y-4">
-                    <flux:field>
-                        <flux:label>Course Name</flux:label>
-                        <flux:input wire:model="courseName" placeholder="e.g., AWS Solutions Architect" />
-                        <flux:error name="courseName" />
-                    </flux:field>
+                    <flux:input wire:model="courseName" label="Course Name" placeholder="e.g., AWS Solutions Architect" />
 
-                    <flux:field>
-                        <flux:label>Description</flux:label>
-                        <flux:textarea wire:model="courseDescription" placeholder="Brief description of the course..." rows="3" />
-                        <flux:error name="courseDescription" />
-                    </flux:field>
+                    <flux:textarea wire:model="courseDescription" label="Description" placeholder="Brief description of the course..." rows="3" />
 
-                    <flux:field>
-                        <flux:label>Prerequisites</flux:label>
-                        <flux:textarea wire:model="coursePrerequisites" placeholder="Any prior knowledge or skills required..." rows="2" />
-                        <flux:error name="coursePrerequisites" />
-                    </flux:field>
+                    <flux:textarea wire:model="coursePrerequisites" label="Prerequisites" placeholder="Any prior knowledge or skills required..." rows="2" />
 
                     <div class="grid grid-cols-2 gap-4">
-                        <flux:field>
-                            <flux:label>Cost</flux:label>
-                            <flux:input wire:model="courseCost" type="number" step="0.01" min="0" placeholder="0.00" />
-                            <flux:description>Leave blank for free courses</flux:description>
-                            <flux:error name="courseCost" />
-                        </flux:field>
+                        <flux:input wire:model="courseCost" label="Cost" type="number" step="0.01" min="0" placeholder="0.00" description="Leave blank for free courses" />
 
-                        <flux:field>
-                            <flux:label>Certification</flux:label>
-                            <flux:switch wire:model="courseOffersCertification" label="Offers certification" />
-                            <flux:error name="courseOffersCertification" />
-                        </flux:field>
+                        <flux:switch wire:model="courseOffersCertification" label="Offers certification" />
                     </div>
 
-                    <flux:field>
-                        <flux:label>Supplier</flux:label>
-                        <flux:select wire:model="courseSupplier" variant="combobox" placeholder="Select or create supplier..." :filter="false" clearable>
-                            <x-slot name="input">
-                                <flux:select.input wire:model.live="supplierSearchTerm" placeholder="Search or create..." />
-                            </x-slot>
+                    <flux:pillbox wire:model="courseSupplier" label="Supplier" variant="combobox">
+                        <x-slot name="input">
+                            <flux:pillbox.input wire:model.live="supplierSearchTerm" placeholder="Search or create supplier..." />
+                        </x-slot>
 
-                            @foreach ($this->filteredSupplierOptions['suppliers'] as $supplier)
-                                <flux:select.option value="{{ $supplier->id }}" wire:key="supplier-{{ $supplier->id }}">{{ $supplier->name }}</flux:select.option>
-                            @endforeach
+                        @foreach ($this->filteredSupplierOptions as $supplier)
+                            <flux:pillbox.option value="{{ $supplier->id }}" wire:key="supplier-{{ $supplier->id }}">{{ $supplier->name }}</flux:pillbox.option>
+                        @endforeach
 
-                            <flux:select.option.create wire:click="openQuickSupplierModal" min-length="2">
-                                Create "<span wire:text="supplierSearchTerm"></span>"
-                            </flux:select.option.create>
-                        </flux:select>
-                        <flux:error name="courseSupplier" />
-                    </flux:field>
+                        <flux:pillbox.option.create wire:click="createSupplierInline" min-length="2">
+                            Create "<span wire:text="supplierSearchTerm"></span>"
+                        </flux:pillbox.option.create>
+                    </flux:pillbox>
 
-                    <flux:field>
-                        <flux:label>Related Skills</flux:label>
-                        <flux:select wire:model="courseSkillIds" variant="listbox" multiple placeholder="Select skills...">
-                            @foreach ($this->skills as $skill)
-                                <flux:select.option value="{{ $skill->id }}" wire:key="skill-{{ $skill->id }}">{{ $skill->name }}</flux:select.option>
-                            @endforeach
-                        </flux:select>
-                        <flux:description>Skills that this course helps develop</flux:description>
-                        <flux:error name="courseSkillIds" />
-                    </flux:field>
+                    <flux:pillbox wire:model="courseSkillIds" label="Related Skills" variant="combobox" multiple>
+                        <x-slot name="input">
+                            <flux:pillbox.input wire:model.live="skillSearchTerm" placeholder="Search skills..." />
+                        </x-slot>
+
+                        @foreach ($this->filteredSkillOptions as $skill)
+                            <flux:pillbox.option value="{{ $skill->id }}" wire:key="skill-{{ $skill->id }}">{{ $skill->name }}</flux:pillbox.option>
+                        @endforeach
+                    </flux:pillbox>
+                    <flux:text class="-mt-2 text-xs">Skills that this course helps develop</flux:text>
                 </div>
 
                 <div class="flex justify-end gap-3">
@@ -186,38 +161,5 @@
                 <flux:button variant="danger" wire:click="deleteCourse">Delete</flux:button>
             </div>
         </div>
-    </flux:modal>
-
-    {{-- Quick Supplier Modal --}}
-    <flux:modal wire:model="showQuickSupplierModal" class="max-w-md">
-        <form wire:submit="saveQuickSupplier">
-            <div class="space-y-6">
-                <div>
-                    <flux:heading size="lg">Create Supplier</flux:heading>
-                    <flux:text class="mt-2">
-                        Quickly add a new training supplier.
-                    </flux:text>
-                </div>
-
-                <div class="space-y-4">
-                    <flux:field>
-                        <flux:label>Supplier Name</flux:label>
-                        <flux:input wire:model="quickSupplierName" placeholder="e.g., Pluralsight" />
-                        <flux:error name="quickSupplierName" />
-                    </flux:field>
-
-                    <flux:field>
-                        <flux:label>Website</flux:label>
-                        <flux:input wire:model="quickSupplierWebsite" type="url" placeholder="https://..." />
-                        <flux:error name="quickSupplierWebsite" />
-                    </flux:field>
-                </div>
-
-                <div class="flex justify-end gap-3">
-                    <flux:button type="button" variant="ghost" wire:click="closeQuickSupplierModal">Cancel</flux:button>
-                    <flux:button type="submit" variant="primary">Create Supplier</flux:button>
-                </div>
-            </div>
-        </form>
     </flux:modal>
 </div>
