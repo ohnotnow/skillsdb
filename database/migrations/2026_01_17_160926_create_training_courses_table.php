@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->text('description')->nullable();
             $table->text('prerequisites')->nullable();
-            $table->decimal('cost', 10, 2)->nullable();
+            $table->string('cost')->nullable();
             $table->boolean('offers_certification')->default(false);
             $table->foreignId('training_supplier_id')->nullable()->constrained()->nullOnDelete();
             $table->timestamps();

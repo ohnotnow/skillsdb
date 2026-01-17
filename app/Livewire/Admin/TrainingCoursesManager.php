@@ -130,37 +130,22 @@ class TrainingCoursesManager extends Component
             ],
             'editingCourse.description' => ['nullable', 'string', 'max:5000'],
             'editingCourse.prerequisites' => ['nullable', 'string', 'max:2000'],
-            'editingCourse.cost' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'editingCourse.cost' => ['nullable', 'string', 'max:255'],
             'editingCourse.offers_certification' => ['boolean'],
             'editingCourse.training_supplier_id' => ['nullable', 'exists:training_suppliers,id'],
             'editingCourse.skill_ids' => ['array'],
             'editingCourse.skill_ids.*' => ['exists:skills,id'],
         ]);
 
-        $data = [
-            'name' => $this->editingCourse['name'],
-            'description' => $this->editingCourse['description'] ?: null,
-            'prerequisites' => $this->editingCourse['prerequisites'] ?: null,
-            'cost' => $this->editingCourse['cost'] !== '' ? $this->editingCourse['cost'] : null,
-            'offers_certification' => $this->editingCourse['offers_certification'],
-            'training_supplier_id' => $this->editingCourse['training_supplier_id'] ?: null,
-        ];
-
-        if ($this->editingCourse['id']) {
-            $course = TrainingCourse::findOrFail($this->editingCourse['id']);
-            $course->update($data);
-            $message = 'Course updated.';
-        } else {
-            $course = TrainingCourse::create($data);
-            $message = 'Course created.';
-        }
+        $course = TrainingCourse::findOrNew($this->editingCourse['id']);
+        $course->fill($this->editingCourse)->save();
 
         $course->skills()->sync($this->editingCourse['skill_ids']);
 
         unset($this->courses);
 
         Flux::modal('course-modal')->close();
-        Flux::toast($message, variant: 'success');
+        Flux::toast('Saved.', variant: 'success');
     }
 
     public function confirmDelete(int $courseId): void

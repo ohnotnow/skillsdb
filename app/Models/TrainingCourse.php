@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,9 +25,15 @@ class TrainingCourse extends Model
     protected function casts(): array
     {
         return [
-            'cost' => 'decimal:2',
             'offers_certification' => 'boolean',
         ];
+    }
+
+    protected function trainingSupplierId(): Attribute
+    {
+        return Attribute::make(
+            set: fn ($value) => $value ?: null,
+        );
     }
 
     // Relationships
@@ -54,6 +61,6 @@ class TrainingCourse extends Model
 
     public function isFree(): bool
     {
-        return $this->cost === null || (float) $this->cost === 0.0;
+        return ! (bool) $this->cost;
     }
 }

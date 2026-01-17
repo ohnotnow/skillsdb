@@ -40,7 +40,7 @@
                             @if ($course->isFree())
                                 <flux:badge color="green" size="sm">Free</flux:badge>
                             @else
-                                {{ number_format($course->cost, 2) }}
+                                {{ $course->cost }}
                             @endif
                         </flux:table.cell>
                         <flux:table.cell class="hidden lg:table-cell">
@@ -107,7 +107,7 @@
                     <flux:textarea wire:model="editingCourse.prerequisites" label="Prerequisites" placeholder="Any prior knowledge or skills required..." rows="2" />
 
                     <div class="grid grid-cols-2 gap-4">
-                        <flux:input wire:model="editingCourse.cost" label="Cost" type="number" step="0.01" min="0" placeholder="0.00" description="Leave blank for free courses" />
+                        <flux:input wire:model="editingCourse.cost" label="Cost" type="number" step="1" min="0" placeholder="1000" description="Leave blank for free" />
 
                         <flux:switch wire:model="editingCourse.offers_certification" label="Offers certification" />
                     </div>

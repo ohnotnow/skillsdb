@@ -109,7 +109,6 @@ it('can create a free course', function () {
 
     $course = TrainingCourse::where('name', 'Free Course')->first();
     expect($course)->not->toBeNull();
-    expect($course->cost)->toBeNull();
     expect($course->isFree())->toBeTrue();
 });
 
@@ -136,20 +135,6 @@ it('prevents duplicate course names', function () {
         ->set('editingCourse.name', 'AWS Course')
         ->call('saveCourse')
         ->assertHasErrors(['editingCourse.name']);
-});
-
-it('validates cost is a valid number', function () {
-    $admin = User::factory()->admin()->create();
-
-    Livewire::actingAs($admin)
-        ->test(TrainingCoursesManager::class)
-        ->call('openCreateModal')
-        ->set('editingCourse.name', 'Test Course')
-        ->set('editingCourse.cost', 'invalid')
-        ->call('saveCourse')
-        ->assertHasErrors(['editingCourse.cost']);
-
-    expect(TrainingCourse::count())->toBe(0);
 });
 
 it('can edit a course', function () {

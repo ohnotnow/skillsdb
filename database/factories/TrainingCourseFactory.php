@@ -21,7 +21,7 @@ class TrainingCourseFactory extends Factory
             'name' => fake()->words(3, true),
             'description' => fake()->paragraph(),
             'prerequisites' => fake()->optional()->sentence(),
-            'cost' => fake()->randomFloat(2, 50, 2000),
+            'cost' => (string) fake()->numberBetween(50, 2000),
             'offers_certification' => fake()->boolean(30),
             'training_supplier_id' => null,
         ];
