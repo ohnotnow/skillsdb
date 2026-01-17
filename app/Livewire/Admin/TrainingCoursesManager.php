@@ -124,7 +124,7 @@ class TrainingCoursesManager extends Component
         $this->coursePrerequisites = $course->prerequisites ?? '';
         $this->courseCost = $course->cost ?? '';
         $this->courseOffersCertification = $course->offers_certification;
-        $this->courseSupplier = $course->training_supplier_id ?? '';
+        $this->courseSupplier = $course->training_supplier_id ? (string) $course->training_supplier_id : '';
         $this->supplierSearchTerm = '';
         $this->skillSearchTerm = '';
         $this->courseSkillIds = $course->skills->pluck('id')->toArray();
@@ -146,7 +146,7 @@ class TrainingCoursesManager extends Component
 
         $supplier = TrainingSupplier::create(['name' => $name]);
 
-        $this->courseSupplier = $supplier->id;
+        $this->courseSupplier = (string) $supplier->id;
         $this->supplierSearchTerm = '';
         unset($this->suppliers, $this->filteredSupplierOptions);
 
