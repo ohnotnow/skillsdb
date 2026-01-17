@@ -2,10 +2,14 @@
 
 namespace Database\Seeders;
 
+use App\Enums\EnrollmentStatus;
 use App\Enums\FluxColour;
 use App\Enums\SkillLevel;
+use App\Enums\TrainingRating;
 use App\Models\Skill;
 use App\Models\SkillCategory;
+use App\Models\TrainingCourse;
+use App\Models\TrainingSupplier;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -20,6 +24,10 @@ class TestDataSeeder extends Seeder
         $users = $this->createTeamMembers();
         $this->assignSkillsToUsers(collect([$adminUser, ...$users]), $skills);
         $this->createApiToken($adminUser);
+
+        $suppliers = $this->createTrainingSuppliers();
+        $courses = $this->createTrainingCourses($suppliers, $skills);
+        $this->enrollUsersInCourses(collect([$adminUser, ...$users]), $courses);
     }
 
     private function createAdminUser(): User
@@ -274,5 +282,177 @@ class TestDataSeeder extends Seeder
         $this->command->info('API Token for '.$user->username.':');
         $this->command->info($token->plainTextToken);
         $this->command->info('');
+    }
+
+    private function createTrainingSuppliers(): array
+    {
+        return [
+            'pluralsight' => TrainingSupplier::create([
+                'name' => 'Pluralsight',
+                'website' => 'https://www.pluralsight.com',
+                'contact_email' => 'contact@pluralsight.com',
+            ]),
+            'udemy' => TrainingSupplier::create([
+                'name' => 'Udemy',
+                'website' => 'https://www.udemy.com',
+                'contact_email' => 'contact@udemy.com',
+            ]),
+            'coursera' => TrainingSupplier::create([
+                'name' => 'Coursera',
+                'website' => 'https://www.coursera.org',
+                'contact_email' => 'contact@coursera.org',
+            ]),
+            'aws' => TrainingSupplier::create([
+                'name' => 'AWS Training',
+                'website' => 'https://aws.amazon.com/training',
+                'contact_email' => 'training@aws.amazon.com',
+            ]),
+            'microsoft' => TrainingSupplier::create([
+                'name' => 'Microsoft Learn',
+                'website' => 'https://learn.microsoft.com',
+            ]),
+            'internal' => TrainingSupplier::create([
+                'name' => 'Internal Training',
+                'notes' => 'In-house training delivered by senior staff',
+            ]),
+        ];
+    }
+
+    private function createTrainingCourses(array $suppliers, array $skills): array
+    {
+        $courses = [];
+
+        // AWS courses
+        $courses['aws_architect'] = TrainingCourse::create([
+            'name' => 'AWS Solutions Architect Associate',
+            'description' => 'Learn to design distributed systems on AWS',
+            'prerequisites' => 'Basic cloud computing knowledge',
+            'cost' => 299.00,
+            'offers_certification' => true,
+            'training_supplier_id' => $suppliers['aws']->id,
+        ]);
+        $courses['aws_architect']->skills()->attach([$skills['aws']->id]);
+
+        $courses['aws_developer'] = TrainingCourse::create([
+            'name' => 'AWS Developer Associate',
+            'description' => 'Learn to develop and maintain applications on AWS',
+            'prerequisites' => 'Programming experience and basic AWS knowledge',
+            'cost' => 299.00,
+            'offers_certification' => true,
+            'training_supplier_id' => $suppliers['aws']->id,
+        ]);
+        $courses['aws_developer']->skills()->attach([$skills['aws']->id]);
+
+        // Docker/Kubernetes courses
+        $courses['docker_mastery'] = TrainingCourse::create([
+            'name' => 'Docker Mastery',
+            'description' => 'Complete Docker and container training',
+            'prerequisites' => 'Linux command line basics',
+            'cost' => 19.99,
+            'offers_certification' => false,
+            'training_supplier_id' => $suppliers['udemy']->id,
+        ]);
+        $courses['docker_mastery']->skills()->attach([$skills['docker']->id]);
+
+        $courses['kubernetes_fundamentals'] = TrainingCourse::create([
+            'name' => 'Kubernetes for Developers',
+            'description' => 'Learn Kubernetes from scratch',
+            'prerequisites' => 'Docker basics',
+            'cost' => 49.99,
+            'offers_certification' => false,
+            'training_supplier_id' => $suppliers['pluralsight']->id,
+        ]);
+        $courses['kubernetes_fundamentals']->skills()->attach([$skills['kubernetes']->id, $skills['docker']->id]);
+
+        // Microsoft/Azure courses
+        $courses['azure_fundamentals'] = TrainingCourse::create([
+            'name' => 'Azure Fundamentals',
+            'description' => 'Introduction to Microsoft Azure cloud services',
+            'cost' => null,
+            'offers_certification' => true,
+            'training_supplier_id' => $suppliers['microsoft']->id,
+        ]);
+        $courses['azure_fundamentals']->skills()->attach([$skills['azure']->id]);
+
+        // Programming courses
+        $courses['laravel_bootcamp'] = TrainingCourse::create([
+            'name' => 'Laravel Bootcamp',
+            'description' => 'Build a Laravel application from scratch',
+            'prerequisites' => 'Basic PHP knowledge',
+            'cost' => null,
+            'offers_certification' => false,
+            'training_supplier_id' => null,
+        ]);
+        $courses['laravel_bootcamp']->skills()->attach([$skills['laravel']->id, $skills['php']->id]);
+
+        $courses['python_data_science'] = TrainingCourse::create([
+            'name' => 'Python for Data Science',
+            'description' => 'Learn Python programming for data analysis',
+            'prerequisites' => 'Basic programming concepts',
+            'cost' => 79.00,
+            'offers_certification' => true,
+            'training_supplier_id' => $suppliers['coursera']->id,
+        ]);
+        $courses['python_data_science']->skills()->attach([$skills['python']->id]);
+
+        // Internal training
+        $courses['git_basics'] = TrainingCourse::create([
+            'name' => 'Git for Beginners',
+            'description' => 'Internal workshop on Git version control',
+            'cost' => null,
+            'offers_certification' => false,
+            'training_supplier_id' => $suppliers['internal']->id,
+        ]);
+        $courses['git_basics']->skills()->attach([$skills['git']->id]);
+
+        $courses['linux_admin'] = TrainingCourse::create([
+            'name' => 'Linux System Administration',
+            'description' => 'Comprehensive Linux admin training',
+            'prerequisites' => 'Basic command line familiarity',
+            'cost' => 199.00,
+            'offers_certification' => true,
+            'training_supplier_id' => $suppliers['pluralsight']->id,
+        ]);
+        $courses['linux_admin']->skills()->attach([$skills['linux_administration']->id, $skills['bash_shell']->id]);
+
+        return $courses;
+    }
+
+    private function enrollUsersInCourses($users, array $courses): void
+    {
+        $courseKeys = array_keys($courses);
+
+        foreach ($users as $user) {
+            // Each user has 0-3 course enrollments
+            $numEnrollments = rand(0, 3);
+            $userCourseKeys = collect($courseKeys)
+                ->shuffle()
+                ->take($numEnrollments);
+
+            foreach ($userCourseKeys as $courseKey) {
+                $course = $courses[$courseKey];
+
+                // 60% completed, 40% booked
+                $status = rand(1, 100) <= 60 ? EnrollmentStatus::Completed : EnrollmentStatus::Booked;
+
+                // Only completed enrollments can have ratings
+                $rating = null;
+                if ($status === EnrollmentStatus::Completed && rand(1, 100) <= 70) {
+                    $ratingValue = rand(1, 100);
+                    if ($ratingValue <= 15) {
+                        $rating = TrainingRating::Bad;
+                    } elseif ($ratingValue <= 35) {
+                        $rating = TrainingRating::Indifferent;
+                    } else {
+                        $rating = TrainingRating::Good;
+                    }
+                }
+
+                $course->users()->attach($user->id, [
+                    'status' => $status->value,
+                    'rating' => $rating?->value,
+                ]);
+            }
+        }
     }
 }

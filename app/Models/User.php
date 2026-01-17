@@ -66,6 +66,14 @@ class User extends Authenticatable
         return $this->hasMany(CoachConversation::class)->latest();
     }
 
+    public function trainingCourses(): BelongsToMany
+    {
+        return $this->belongsToMany(TrainingCourse::class, 'training_course_user')
+            ->using(TrainingCourseUser::class)
+            ->withPivot(['status', 'rating'])
+            ->withTimestamps();
+    }
+
     // Accessors
 
     protected function fullName(): Attribute

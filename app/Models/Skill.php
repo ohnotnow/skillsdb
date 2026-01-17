@@ -47,6 +47,12 @@ class Skill extends Model
             ->withTimestamps();
     }
 
+    public function trainingCourses(): BelongsToMany
+    {
+        return $this->belongsToMany(TrainingCourse::class, 'skill_training_course')
+            ->withTimestamps();
+    }
+
     // Scopes
 
     public function scopeApproved($query)
