@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TrainingRating;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -64,6 +65,15 @@ class TrainingCourse extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeWithRatingCounts($query)
+    {
+        return $query->withCount([
+            'users as good_count' => fn ($q) => $q->where('rating', TrainingRating::Good),
+            'users as indifferent_count' => fn ($q) => $q->where('rating', TrainingRating::Indifferent),
+            'users as bad_count' => fn ($q) => $q->where('rating', TrainingRating::Bad),
+        ]);
     }
 
     // Custom methods
