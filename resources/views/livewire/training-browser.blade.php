@@ -20,15 +20,30 @@
                     <div class="flex flex-col h-full">
                         <div class="mb-3">
                             <div class="flex items-start justify-between gap-2">
-                                <flux:heading size="sm">{{ $course->name }}</flux:heading>
-                                <div class="flex gap-1 flex-shrink-0">
-                                    @if ($course->isFree())
-                                        <flux:badge size="sm" color="green">Free</flux:badge>
+                                <div class="flex items-center gap-2">
+                                    @if ($course->good_count > 0 || $course->indifferent_count > 0 || $course->bad_count > 0)
+                                        <flux:dropdown>
+                                            <button type="button" class="cursor-pointer text-base" title="View ratings">
+                                                @if ($course->good_count - $course->bad_count > 0)
+                                                    👍
+                                                @elseif ($course->good_count - $course->bad_count < 0)
+                                                    👎
+                                                @else
+                                                    😐
+                                                @endif
+                                            </button>
+                                            <flux:menu>
+                                                <flux:menu.item icon="hand-thumb-up">Good: {{ $course->good_count }}</flux:menu.item>
+                                                <flux:menu.item icon="minus">Indifferent: {{ $course->indifferent_count }}</flux:menu.item>
+                                                <flux:menu.item icon="hand-thumb-down">Bad: {{ $course->bad_count }}</flux:menu.item>
+                                            </flux:menu>
+                                        </flux:dropdown>
                                     @endif
-                                    @if ($course->offers_certification)
-                                        <flux:badge size="sm" color="blue">Certified</flux:badge>
-                                    @endif
+                                    <flux:heading size="sm">{{ $course->name }}</flux:heading>
                                 </div>
+                                @if ($course->users->isEmpty())
+                                    <flux:button wire:click="enroll({{ $course->id }})" size="sm" icon="plus" square title="Book this course" />
+                                @endif
                             </div>
                             @if ($course->supplier)
                                 <flux:text size="sm" class="text-zinc-500">{{ $course->supplier->name }}</flux:text>
@@ -54,58 +69,39 @@
                             </div>
                         @endif
 
-                        @if ($course->good_count > 0 || $course->indifferent_count > 0 || $course->bad_count > 0)
-                            <div class="flex gap-2 mb-3 text-sm">
-                                @if ($course->good_count > 0)
-                                    <span class="text-green-600" title="Good ratings">{{ $course->good_count }}</span>
-                                @endif
-                                @if ($course->indifferent_count > 0)
-                                    <span class="text-zinc-500" title="Indifferent ratings">{{ $course->indifferent_count }}</span>
-                                @endif
-                                @if ($course->bad_count > 0)
-                                    <span class="text-red-600" title="Bad ratings">{{ $course->bad_count }}</span>
-                                @endif
-                            </div>
-                        @endif
-
                         <div class="border-t border-zinc-200 dark:border-zinc-700 pt-3 mt-auto">
                             @if ($course->users->isEmpty())
-                                <flux:button wire:click="enroll({{ $course->id }})" size="sm" variant="primary" class="w-full">
-                                    Book
-                                </flux:button>
+                                <div class="flex flex-wrap gap-1">
+                                    @if ($course->isFree())
+                                        <flux:badge size="sm" color="green">Free</flux:badge>
+                                    @endif
+                                    @if ($course->offers_certification)
+                                        <flux:badge size="sm" color="blue">Certified</flux:badge>
+                                    @endif
+                                </div>
                             @elseif ($course->users->first()->pivot->status === \App\Enums\EnrollmentStatus::Booked)
-                                <div class="space-y-2">
-                                    <div class="flex items-center justify-between">
-                                        <flux:badge color="amber">Booked</flux:badge>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <flux:button wire:click="markCompleted({{ $course->id }})" size="sm" variant="primary" class="flex-1">
-                                            Mark Complete
-                                        </flux:button>
-                                        <flux:button wire:click="unenroll({{ $course->id }})" size="sm" variant="ghost">
-                                            Cancel
-                                        </flux:button>
-                                    </div>
+                                <div class="flex items-center gap-2">
+                                    <flux:button wire:click="markCompleted({{ $course->id }})" size="sm" variant="primary" color="sky" class="flex-1">
+                                        Mark Complete
+                                    </flux:button>
+                                    <flux:button wire:click="unenroll({{ $course->id }})" size="sm" variant="ghost">
+                                        Cancel
+                                    </flux:button>
                                 </div>
                             @elseif ($course->users->first()->pivot->status === \App\Enums\EnrollmentStatus::Completed)
                                 <div class="space-y-2">
-                                    <div class="flex items-center justify-between">
-                                        <flux:badge color="green">Completed</flux:badge>
-                                    </div>
-                                    <div>
-                                        <flux:text size="sm" class="mb-1">Rate this course:</flux:text>
-                                        <div class="flex gap-1">
-                                            @foreach (\App\Enums\TrainingRating::cases() as $ratingOption)
-                                                <flux:button
-                                                    wire:click="setRating({{ $course->id }}, {{ $ratingOption->value }})"
-                                                    size="sm"
-                                                    :variant="$course->users->first()->pivot->rating === $ratingOption ? 'filled' : 'ghost'"
-                                                    :color="$ratingOption->colour()"
-                                                >
-                                                    {{ $ratingOption->label() }}
-                                                </flux:button>
-                                            @endforeach
-                                        </div>
+                                    <flux:text size="sm" class="text-green-600 dark:text-green-400">Completed</flux:text>
+                                    <div class="flex gap-1">
+                                        @foreach (\App\Enums\TrainingRating::cases() as $ratingOption)
+                                            <flux:button
+                                                wire:click="setRating({{ $course->id }}, {{ $ratingOption->value }})"
+                                                size="sm"
+                                                :variant="$course->users->first()->pivot->rating === $ratingOption ? 'filled' : 'ghost'"
+                                                :color="$ratingOption->colour()"
+                                            >
+                                                {{ $ratingOption->label() }}
+                                            </flux:button>
+                                        @endforeach
                                     </div>
                                 </div>
                             @endif

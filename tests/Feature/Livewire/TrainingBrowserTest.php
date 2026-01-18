@@ -159,14 +159,14 @@ it('can enroll in a course', function () {
     expect($user->trainingCourses->first()->pivot->status)->toBe(EnrollmentStatus::Booked);
 });
 
-it('shows booked status after enrollment', function () {
+it('shows Mark Complete button after enrollment', function () {
     $user = User::factory()->create();
     $course = TrainingCourse::factory()->create(['name' => 'Test Course']);
 
     Livewire::actingAs($user)
         ->test(TrainingBrowser::class)
         ->call('enroll', $course->id)
-        ->assertSee('Booked');
+        ->assertSee('Mark Complete');
 });
 
 it('cannot enroll twice in the same course', function () {
