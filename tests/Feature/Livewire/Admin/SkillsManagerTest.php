@@ -9,7 +9,7 @@ use Livewire\Livewire;
 
 it('requires authentication', function () {
     $this->get('/admin/skills')
-        ->assertRedirect();
+        ->assertRedirect(route('login'));
 });
 
 it('requires admin access', function () {
@@ -131,6 +131,8 @@ it('can edit a skill', function () {
     $skill = Skill::factory()->approved()->create(['name' => 'PHP', 'description' => 'Old description']);
     $category = SkillCategory::factory()->create(['name' => 'Backend']);
 
+    expect(Skill::count())->toBe(1);
+
     Livewire::actingAs($admin)
         ->test(SkillsManager::class)
         ->call('openEditModal', $skill->id)
@@ -144,6 +146,7 @@ it('can edit a skill', function () {
         ->assertSet('showSkillModal', false)
         ->assertHasNoErrors();
 
+    expect(Skill::count())->toBe(1);
     $skill->refresh();
     expect($skill->name)->toBe('PHP 8');
     expect($skill->description)->toBe('New description');
@@ -167,6 +170,7 @@ it('allows editing a skill to keep its own name', function () {
 it('can delete a skill', function () {
     $admin = User::factory()->admin()->create();
     $skill = Skill::factory()->approved()->create(['name' => 'PHP']);
+    $otherSkill = Skill::factory()->approved()->create(['name' => 'JavaScript']);
 
     Livewire::actingAs($admin)
         ->test(SkillsManager::class)
@@ -175,6 +179,7 @@ it('can delete a skill', function () {
         ->call('deleteSkill');
 
     expect(Skill::find($skill->id))->toBeNull();
+    expect(Skill::find($otherSkill->id))->not->toBeNull();
 });
 
 it('can cancel delete', function () {
@@ -341,6 +346,8 @@ it('can edit a category', function () {
     $admin = User::factory()->admin()->create();
     $category = SkillCategory::factory()->create(['name' => 'Backend', 'colour' => FluxColour::Sky]);
 
+    expect(SkillCategory::count())->toBe(1);
+
     Livewire::actingAs($admin)
         ->test(SkillsManager::class)
         ->call('openEditCategoryModal', $category->id)
@@ -354,6 +361,7 @@ it('can edit a category', function () {
         ->assertSet('showCategoryModal', false)
         ->assertHasNoErrors();
 
+    expect(SkillCategory::count())->toBe(1);
     $category->refresh();
     expect($category->name)->toBe('Backend Development');
     expect($category->colour)->toBe(FluxColour::Violet);
@@ -376,6 +384,7 @@ it('allows editing a category to keep its own name', function () {
 it('can delete a category without skills', function () {
     $admin = User::factory()->admin()->create();
     $category = SkillCategory::factory()->create(['name' => 'Empty Category']);
+    $otherCategory = SkillCategory::factory()->create(['name' => 'Other Category']);
 
     Livewire::actingAs($admin)
         ->test(SkillsManager::class)
@@ -385,6 +394,7 @@ it('can delete a category without skills', function () {
         ->assertHasNoErrors();
 
     expect(SkillCategory::find($category->id))->toBeNull();
+    expect(SkillCategory::find($otherCategory->id))->not->toBeNull();
 });
 
 it('can cancel category delete', function () {
@@ -419,7 +429,9 @@ it('migrates skills when deleting category with skills', function () {
     $admin = User::factory()->admin()->create();
     $sourceCategory = SkillCategory::factory()->create(['name' => 'Old Category']);
     $targetCategory = SkillCategory::factory()->create(['name' => 'New Category']);
+    $unrelatedCategory = SkillCategory::factory()->create(['name' => 'Unrelated Category']);
     $skill = Skill::factory()->approved()->create(['skill_category_id' => $sourceCategory->id]);
+    $unrelatedSkill = Skill::factory()->approved()->create(['skill_category_id' => $unrelatedCategory->id]);
 
     Livewire::actingAs($admin)
         ->test(SkillsManager::class)
@@ -430,6 +442,7 @@ it('migrates skills when deleting category with skills', function () {
 
     expect(SkillCategory::find($sourceCategory->id))->toBeNull();
     expect($skill->fresh()->skill_category_id)->toBe($targetCategory->id);
+    expect($unrelatedSkill->fresh()->skill_category_id)->toBe($unrelatedCategory->id);
 });
 
 it('shows skill count in categories tab', function () {
@@ -462,4 +475,81 @@ it('can create a category inline when creating a skill', function () {
     $skill = Skill::where('name', 'Claude Code')->first();
     expect($skill)->not->toBeNull();
     expect($skill->skill_category_id)->toBe($category->id);
+});
+
+it('uses existing category when creating inline category with same name', function () {
+    $admin = User::factory()->admin()->create();
+    $existingCategory = SkillCategory::factory()->create(['name' => 'Existing Category']);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openCreateModal')
+        ->set('skillName', 'Some Skill')
+        ->set('categorySearchTerm', 'Existing Category')
+        ->call('createCategoryFromSearch')
+        ->assertSet('skillCategoryId', $existingCategory->id)
+        ->call('saveSkill')
+        ->assertHasNoErrors();
+
+    expect(SkillCategory::where('name', 'Existing Category')->count())->toBe(1);
+    expect(Skill::where('name', 'Some Skill')->first()->skill_category_id)->toBe($existingCategory->id);
+});
+
+it('validates skill name max length', function () {
+    $admin = User::factory()->admin()->create();
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openCreateModal')
+        ->set('skillName', str_repeat('a', 256))
+        ->call('saveSkill')
+        ->assertHasErrors(['skillName']);
+
+    expect(Skill::count())->toBe(0);
+});
+
+it('validates skill description max length', function () {
+    $admin = User::factory()->admin()->create();
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openCreateModal')
+        ->set('skillName', 'Valid Name')
+        ->set('skillDescription', str_repeat('a', 1001))
+        ->call('saveSkill')
+        ->assertHasErrors(['skillDescription']);
+
+    expect(Skill::count())->toBe(0);
+});
+
+it('validates category name max length', function () {
+    $admin = User::factory()->admin()->create();
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openCreateCategoryModal')
+        ->set('categoryName', str_repeat('a', 256))
+        ->call('saveCategory')
+        ->assertHasErrors(['categoryName']);
+
+    expect(SkillCategory::count())->toBe(0);
+});
+
+it('does not change approval details when approving an already approved skill', function () {
+    $originalAdmin = User::factory()->admin()->create();
+    $anotherAdmin = User::factory()->admin()->create();
+    $skill = Skill::factory()->approved()->create([
+        'name' => 'PHP',
+        'approved_by' => $originalAdmin->id,
+        'approved_at' => now()->subDays(7),
+    ]);
+    $originalApprovedAt = $skill->approved_at;
+
+    Livewire::actingAs($anotherAdmin)
+        ->test(SkillsManager::class)
+        ->call('approveSkill', $skill->id);
+
+    $skill->refresh();
+    expect($skill->approved_by)->toBe($originalAdmin->id);
+    expect($skill->approved_at->toDateTimeString())->toBe($originalApprovedAt->toDateTimeString());
 });

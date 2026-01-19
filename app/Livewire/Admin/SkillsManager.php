@@ -125,7 +125,7 @@ class SkillsManager extends Component
 
     public function createCategoryFromSearch(): void
     {
-        $category = SkillCategory::create(['name' => $this->categorySearchTerm]);
+        $category = SkillCategory::firstOrCreate(['name' => $this->categorySearchTerm]);
         $this->skillCategoryId = $category->id;
         $this->categorySearchTerm = '';
         unset($this->categories, $this->filteredCategoryOptions);
@@ -191,6 +191,10 @@ class SkillsManager extends Component
     public function approveSkill(int $skillId): void
     {
         $skill = Skill::findOrFail($skillId);
+
+        if ($skill->isApproved()) {
+            return;
+        }
 
         $skill->update([
             'approved_by' => Auth::id(),
