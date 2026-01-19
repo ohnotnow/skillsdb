@@ -1,6 +1,9 @@
 <div>
-    <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
+    <div class="flex flex-col md:flex-row gap-4 items-center justify-between mb-6">
         <flux:heading size="xl" level="1">Training Courses</flux:heading>
+        <flux:button wire:click="openCreateModal" icon="plus">
+            Add Course
+        </flux:button>
     </div>
 
     <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-end justify-between mb-6">
@@ -14,9 +17,6 @@
             </div>
             <flux:switch wire:model.live="showInactive" label="Show inactive" />
         </div>
-        <flux:button wire:click="openCreateModal" icon="plus">
-            Add Course
-        </flux:button>
     </div>
 
     @if ($this->courses->count() > 0)
