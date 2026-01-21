@@ -8,6 +8,7 @@ use App\Enums\SkillLevel;
 use App\Enums\TrainingRating;
 use App\Models\Skill;
 use App\Models\SkillCategory;
+use App\Models\Team;
 use App\Models\TrainingCourse;
 use App\Models\TrainingSupplier;
 use App\Models\User;
@@ -24,6 +25,7 @@ class TestDataSeeder extends Seeder
         $users = $this->createTeamMembers();
         $this->assignSkillsToUsers(collect([$adminUser, ...$users]), $skills);
         $this->createApiToken($adminUser);
+        $this->createTeams($adminUser, $users);
 
         $suppliers = $this->createTrainingSuppliers();
         $courses = $this->createTrainingCourses($suppliers, $skills);
@@ -282,6 +284,30 @@ class TestDataSeeder extends Seeder
         $this->command->info('API Token for '.$user->username.':');
         $this->command->info($token->plainTextToken);
         $this->command->info('');
+    }
+
+    private function createTeams(User $adminUser, array $users): void
+    {
+        $infrastructure = Team::create([
+            'name' => 'Infrastructure',
+            'description' => 'Server and network infrastructure team',
+            'manager_id' => $adminUser->id,
+        ]);
+        $infrastructure->members()->attach([$adminUser->id, $users[0]->id, $users[1]->id, $users[2]->id]);
+
+        $researchComputing = Team::create([
+            'name' => 'Research Computing',
+            'description' => 'Supporting researchers with HPC and data services',
+            'manager_id' => $users[3]->id,
+        ]);
+        $researchComputing->members()->attach([$users[3]->id, $users[4]->id, $users[5]->id]);
+
+        $development = Team::create([
+            'name' => 'Development',
+            'description' => 'Web and application development',
+            'manager_id' => $users[6]->id,
+        ]);
+        $development->members()->attach([$users[6]->id, $users[7]->id, $users[8]->id, $users[9]->id]);
     }
 
     private function createTrainingSuppliers(): array

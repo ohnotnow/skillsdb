@@ -74,6 +74,17 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function teams(): BelongsToMany
+    {
+        return $this->belongsToMany(Team::class, 'team_user')
+            ->withTimestamps();
+    }
+
+    public function managedTeams(): HasMany
+    {
+        return $this->hasMany(Team::class, 'manager_id');
+    }
+
     // Accessors
 
     protected function fullName(): Attribute
@@ -91,6 +102,11 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->is_admin;
+    }
+
+    public function isTeamManager(): bool
+    {
+        return $this->managedTeams()->exists();
     }
 
     public function touchSkillsUpdatedAt(): void
