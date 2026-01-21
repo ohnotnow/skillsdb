@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\SkillsCoach\CoachContext;
 use App\Services\SkillsCoach\Contracts\LlmProvider;
 use App\Services\SkillsCoach\SystemPrompt;
+use App\Services\SkillsCoach\TeamSystemPrompt;
 use App\Services\SkillsCoach\Tools\FindExperts;
 use App\Services\SkillsCoach\Tools\FindSkillSharers;
 use App\Services\SkillsCoach\Tools\GetSkillJourney;
@@ -24,6 +25,7 @@ class PrismProvider implements LlmProvider
 {
     public function __construct(
         protected SystemPrompt $systemPrompt,
+        protected TeamSystemPrompt $teamSystemPrompt,
         protected CoachContext $context
     ) {}
 
@@ -37,16 +39,36 @@ class PrismProvider implements LlmProvider
         // Add the new user message
         $messages[] = new UserMessage($userMessage);
 
+        // Select system prompt and tools based on mode
+        $systemPrompt = $this->buildSystemPrompt($user);
+        $tools = $this->context->isTeamMode()
+            ? $this->buildTeamTools()
+            : $this->buildPersonalTools();
+
         $response = Prism::text()
             ->using(Provider::Anthropic, config('services.skills_coach.model', 'claude-sonnet-4-20250514'))
-            ->withSystemPrompt($this->systemPrompt->build($user))
+            ->withSystemPrompt($systemPrompt)
             ->withMessages($messages)
             ->withMaxTokens(4096)
             ->withMaxSteps(5)
-            ->withTools($this->buildTools())
+            ->withTools($tools)
             ->asText();
 
         return $response->text;
+    }
+
+    /**
+     * Build the appropriate system prompt based on mode.
+     */
+    protected function buildSystemPrompt(User $user): string
+    {
+        if ($this->context->isTeamMode()) {
+            $team = $this->context->getTeam();
+
+            return $this->teamSystemPrompt->build($user, $team);
+        }
+
+        return $this->systemPrompt->build($user);
     }
 
     /**
@@ -69,11 +91,11 @@ class PrismProvider implements LlmProvider
     }
 
     /**
-     * Build the tools available to the coach.
+     * Build the tools available for personal coaching.
      *
      * @return array<\Prism\Prism\Tool>
      */
-    protected function buildTools(): array
+    protected function buildPersonalTools(): array
     {
         return [
             Tool::make(GetUserProfile::class),
@@ -84,6 +106,21 @@ class PrismProvider implements LlmProvider
             Tool::make(GetSkillJourney::class),
             Tool::make(SearchByCategory::class),
             Tool::make(GetUserProgress::class),
+        ];
+    }
+
+    /**
+     * Build the tools available for team coaching.
+     *
+     * @return array<\Prism\Prism\Tool>
+     */
+    protected function buildTeamTools(): array
+    {
+        // Team tools - more will be added in Phase 3
+        return [
+            Tool::make(GetTeamGaps::class),
+            Tool::make(FindExperts::class),
+            Tool::make(GetTrendingSkills::class),
         ];
     }
 }

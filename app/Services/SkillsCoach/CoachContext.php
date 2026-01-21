@@ -2,6 +2,8 @@
 
 namespace App\Services\SkillsCoach;
 
+use App\Enums\CoachMode;
+use App\Models\Team;
 use App\Models\User;
 
 /**
@@ -11,6 +13,10 @@ use App\Models\User;
 class CoachContext
 {
     protected ?User $user = null;
+
+    protected ?Team $team = null;
+
+    protected CoachMode $mode = CoachMode::Personal;
 
     public function setUser(User $user): void
     {
@@ -25,5 +31,30 @@ class CoachContext
     public function getUserOrFail(): User
     {
         return $this->user ?? auth()->user();
+    }
+
+    public function setTeam(Team $team): void
+    {
+        $this->team = $team;
+    }
+
+    public function getTeam(): ?Team
+    {
+        return $this->team;
+    }
+
+    public function setMode(CoachMode $mode): void
+    {
+        $this->mode = $mode;
+    }
+
+    public function getMode(): CoachMode
+    {
+        return $this->mode;
+    }
+
+    public function isTeamMode(): bool
+    {
+        return $this->mode === CoachMode::Team;
     }
 }
