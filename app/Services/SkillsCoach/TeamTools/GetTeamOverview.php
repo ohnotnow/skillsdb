@@ -2,6 +2,7 @@
 
 namespace App\Services\SkillsCoach\TeamTools;
 
+use App\Enums\SkillHistoryEvent;
 use App\Enums\SkillLevel;
 use App\Models\SkillHistory;
 use App\Services\SkillsCoach\CoachContext;
@@ -14,7 +15,7 @@ class GetTeamOverview extends Tool
     ) {
         $this
             ->as('get_team_overview')
-            ->for('Get an overview of the team: members, skill distribution, category coverage, and recent activity')
+            ->for('Get a high-level picture of the actual humans in the team: who they are, what they know, what they are learning')
             ->using($this);
     }
 
@@ -26,72 +27,56 @@ class GetTeamOverview extends Tool
             return json_encode(['error' => 'No team context set']);
         }
 
-        $team->load('members.skills.category', 'manager');
+        $team->load('members.skills.category', 'members.teams', 'members.skillHistory', 'manager');
 
         $members = $team->members;
-        $distribution = $this->calculateDistribution($members);
-        $categoryCoverage = $this->calculateCategoryCoverage($members);
-        $recentActivity = $this->getRecentActivity($members);
+        $people = $members->map(fn ($member) => $this->buildPersonData($member))->values()->toArray();
+
+        $allSkillIds = $members->flatMap(fn ($m) => $m->skills->pluck('id'))->unique();
+        $recentActivity = $this->getRecentActivitySummary($members);
 
         return json_encode([
-            'team_name' => $team->name,
             'manager' => $team->manager->full_name,
-            'member_count' => $members->count(),
-            'members' => $members->pluck('full_name')->toArray(),
-            'skill_distribution' => $distribution,
-            'category_coverage' => $categoryCoverage,
+            'people' => $people,
+            'total_people' => $members->count(),
+            'total_unique_skills' => $allSkillIds->count(),
             'recent_activity' => $recentActivity,
         ], JSON_PRETTY_PRINT);
     }
 
-    protected function calculateDistribution($members): array
+    protected function buildPersonData($member): array
     {
-        $distribution = ['high' => 0, 'medium' => 0, 'low' => 0, 'total' => 0];
-
-        foreach ($members as $member) {
-            foreach ($member->skills as $skill) {
-                $distribution['total']++;
-                match ($skill->pivot->level) {
-                    SkillLevel::High => $distribution['high']++,
-                    SkillLevel::Medium => $distribution['medium']++,
-                    SkillLevel::Low => $distribution['low']++,
-                };
-            }
-        }
-
-        return $distribution;
-    }
-
-    protected function calculateCategoryCoverage($members): array
-    {
-        $memberCount = $members->count();
-        $categoryMembers = collect();
-
-        foreach ($members as $member) {
-            foreach ($member->skills as $skill) {
-                $categoryName = $skill->category?->name ?? 'Uncategorised';
-                if (! $categoryMembers->has($categoryName)) {
-                    $categoryMembers[$categoryName] = collect();
-                }
-                $categoryMembers[$categoryName]->push($member->id);
-            }
-        }
-
-        return $categoryMembers
-            ->map(fn ($memberIds, $category) => [
-                'category' => $category,
-                'members_with_skills' => $memberIds->unique()->count(),
-                'percentage' => $memberCount > 0
-                    ? round($memberIds->unique()->count() / $memberCount * 100)
-                    : 0,
-            ])
-            ->sortByDesc('members_with_skills')
+        $topSkills = $member->skills
+            ->filter(fn ($s) => $s->pivot->level->value >= SkillLevel::Medium->value)
+            ->sortByDesc(fn ($s) => $s->pivot->level->value)
+            ->take(4)
+            ->map(fn ($s) => $s->name.' ('.$s->pivot->level->label().')')
             ->values()
-            ->take(10)
             ->toArray();
+
+        $sixtyDaysAgo = now()->subDays(60);
+        $recentlyLearning = $member->skillHistory
+            ->where('event_type', SkillHistoryEvent::Added)
+            ->where('new_level', SkillLevel::Low->value)
+            ->where('created_at', '>=', $sixtyDaysAgo)
+            ->map(fn ($h) => $h->skill->name ?? 'Unknown')
+            ->unique()
+            ->values()
+            ->toArray();
+
+        $lastActivity = $member->skillHistory->first()?->created_at;
+
+        return [
+            'name' => $member->full_name,
+            'org_teams' => $member->teams->pluck('name')->toArray(),
+            'skill_count' => $member->skills->count(),
+            'top_skills' => $topSkills,
+            'recently_learning' => $recentlyLearning,
+            'last_active' => $lastActivity ? $lastActivity->diffForHumans() : 'never',
+        ];
     }
 
-    protected function getRecentActivity($members): string
+    protected function getRecentActivitySummary($members): string
     {
         $memberIds = $members->pluck('id');
         $thirtyDaysAgo = now()->subDays(30);
@@ -100,9 +85,8 @@ class GetTeamOverview extends Tool
             ->where('created_at', '>=', $thirtyDaysAgo)
             ->get();
 
-        $added = $recentHistory->where('event_type', 'added')->count();
-        $levelledUp = $recentHistory->where('event_type', 'levelled_up')->count();
-        $removed = $recentHistory->where('event_type', 'removed')->count();
+        $added = $recentHistory->where('event_type', SkillHistoryEvent::Added)->count();
+        $levelledUp = $recentHistory->where('event_type', SkillHistoryEvent::LevelledUp)->count();
 
         $parts = [];
         if ($added > 0) {
@@ -110,9 +94,6 @@ class GetTeamOverview extends Tool
         }
         if ($levelledUp > 0) {
             $parts[] = "{$levelledUp} level-up".($levelledUp === 1 ? '' : 's');
-        }
-        if ($removed > 0) {
-            $parts[] = "{$removed} removed";
         }
 
         return empty($parts)
