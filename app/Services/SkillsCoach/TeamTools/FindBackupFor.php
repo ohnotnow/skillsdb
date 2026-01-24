@@ -9,6 +9,8 @@ use Prism\Prism\Tool;
 
 class FindBackupFor extends Tool
 {
+    use HandlesContactability;
+
     public function __construct(
         protected CoachContext $context
     ) {
@@ -78,11 +80,10 @@ class FindBackupFor extends Tool
                     $theirLevel = $m->skills->find($skill->id)->pivot->level;
                     $couldCover = $this->assessCoverage($theirLevel, $personLevel);
 
-                    return [
-                        'name' => $m->full_name,
+                    return $this->formatPersonWithContactability($m, [
                         'level' => $theirLevel->label(),
                         'could_cover' => $couldCover,
-                    ];
+                    ]);
                 })
                 ->sortByDesc(fn ($o) => SkillLevel::tryFrom($o['level'])?->value ?? 0)
                 ->values()
@@ -150,10 +151,9 @@ class FindBackupFor extends Tool
 
         $people = $matchingMembers->map(function ($member) use ($skill) {
             $level = $member->skills->find($skill->id)->pivot->level;
-            $entry = [
-                'name' => $member->full_name,
+            $entry = $this->formatPersonWithContactability($member, [
                 'level' => $level->label(),
-            ];
+            ]);
             if ($level === SkillLevel::Low) {
                 $entry['note'] = 'Currently learning';
             }
@@ -277,6 +277,11 @@ class FindBackupFor extends Tool
         }
 
         return 'No coverage';
+    }
+
+    protected function getContext(): CoachContext
+    {
+        return $this->context;
     }
 
     protected function generateRecommendation(array $coverage, string $personName): string

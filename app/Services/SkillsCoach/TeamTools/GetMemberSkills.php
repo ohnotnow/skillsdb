@@ -9,6 +9,8 @@ use Prism\Prism\Tool;
 
 class GetMemberSkills extends Tool
 {
+    use HandlesContactability;
+
     public function __construct(
         protected CoachContext $context
     ) {
@@ -151,12 +153,13 @@ class GetMemberSkills extends Tool
             }
 
             $theirExpertSkills = $other->skills->filter(fn ($s) => $s->pivot->level === SkillLevel::High);
+            $mentorEntry = $this->formatPersonWithContactability($other);
 
             foreach ($theirExpertSkills as $skill) {
                 if (! in_array($skill->id, $personSkillIds)) {
-                    $opportunities[$skill->name][] = $other->full_name;
+                    $opportunities[$skill->name][$other->id] = $mentorEntry;
                 } elseif ($personSkillLevels[$skill->id]->value < SkillLevel::High->value) {
-                    $opportunities[$skill->name][] = $other->full_name;
+                    $opportunities[$skill->name][$other->id] = $mentorEntry;
                 }
             }
         }
@@ -164,11 +167,16 @@ class GetMemberSkills extends Tool
         return collect($opportunities)
             ->map(fn ($mentors, $skill) => [
                 'skill' => $skill,
-                'potential_mentors' => array_values(array_unique($mentors)),
+                'potential_mentors' => array_values($mentors),
             ])
             ->values()
             ->take(5)
             ->toArray();
+    }
+
+    protected function getContext(): CoachContext
+    {
+        return $this->context;
     }
 
     protected function findMemberByName(string $name, $members)

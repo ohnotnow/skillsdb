@@ -10,6 +10,8 @@ use Prism\Prism\Tool;
 
 class FindMentoringPairs extends Tool
 {
+    use HandlesContactability;
+
     public function __construct(
         protected CoachContext $context
     ) {
@@ -83,18 +85,17 @@ class FindMentoringPairs extends Tool
                     $learnerLevel = $learnerSkill?->pivot->level;
                     $gap = $learnerLevel ? (SkillLevel::High->value - $learnerLevel->value) : 3;
 
-                    return [
-                        'name' => $learner->full_name,
+                    return $this->formatPersonWithContactability($learner, [
                         'level' => $learnerLevel?->label() ?? 'No skill yet',
                         'gap' => $gap,
-                    ];
+                    ]);
                 })
                 ->sortByDesc('gap')
                 ->values()
                 ->toArray();
 
             return [
-                'mentor' => ['name' => $expert->full_name, 'level' => 'High'],
+                'mentor' => $this->formatPersonWithContactability($expert, ['level' => 'High']),
                 'could_mentor' => $couldMentor,
             ];
         })->values()->toArray();
@@ -146,16 +147,23 @@ class FindMentoringPairs extends Tool
                     })
                     ->map(fn ($s) => [
                         'skill' => $s->name,
-                        'mentor' => $potential->full_name,
+                        'mentor' => $this->formatPersonWithContactability($potential),
                         'your_level' => $personSkillLevels[$s->id]?->label() ?? 'No skill yet',
                     ]);
             })
             ->groupBy('skill')
-            ->map(fn ($group, $skill) => [
-                'skill' => $skill,
-                'potential_mentors' => $group->pluck('mentor')->unique()->values()->toArray(),
-                'your_level' => $group->first()['your_level'],
-            ])
+            ->map(function ($group, $skill) {
+                $mentors = $group->pluck('mentor')
+                    ->unique(fn ($m) => $m['name'])
+                    ->values()
+                    ->toArray();
+
+                return [
+                    'skill' => $skill,
+                    'potential_mentors' => $mentors,
+                    'your_level' => $group->first()['your_level'],
+                ];
+            })
             ->values()
             ->toArray();
 
@@ -194,10 +202,9 @@ class FindMentoringPairs extends Tool
                 ->map(function ($m) use ($skill) {
                     $theirSkill = $m->skills->find($skill->id);
 
-                    return [
-                        'name' => $m->full_name,
+                    return $this->formatPersonWithContactability($m, [
                         'level' => $theirSkill?->pivot->level->label() ?? 'No skill yet',
-                    ];
+                    ]);
                 })
                 ->sortBy(fn ($m) => $m['level'] === 'No skill yet' ? 0 : SkillLevel::tryFrom($m['level'])?->value ?? 0)
                 ->values()
@@ -237,10 +244,13 @@ class FindMentoringPairs extends Tool
             });
 
             if ($experts->count() === 1 && $learners->isNotEmpty()) {
+                $expert = $experts->first();
                 $opportunities->push([
                     'skill' => $skill->name,
-                    'mentor' => $experts->first()->full_name.' (High)',
-                    'potential_mentees' => $learners->map(fn ($l) => $l->full_name.' ('.$l->skills->find($skill->id)->pivot->level->label().')')->values()->toArray(),
+                    'mentor' => $this->formatPersonWithContactability($expert, ['level' => 'High']),
+                    'potential_mentees' => $learners->map(fn ($l) => $this->formatPersonWithContactability($l, [
+                        'level' => $l->skills->find($skill->id)->pivot->level->label(),
+                    ]))->values()->toArray(),
                     'why' => 'Single expert with eager learners',
                 ]);
             }
@@ -277,14 +287,18 @@ class FindMentoringPairs extends Tool
                     ->values()
                     ->toArray();
 
-                return [
-                    'name' => $m->full_name,
+                return $this->formatPersonWithContactability($m, [
                     'recently_started' => $recentSkills,
-                ];
+                ]);
             })
             ->filter(fn ($m) => ! empty($m['recently_started']))
             ->values()
             ->toArray();
+    }
+
+    protected function getContext(): CoachContext
+    {
+        return $this->context;
     }
 
     protected function findMemberByName(string $name, $members)

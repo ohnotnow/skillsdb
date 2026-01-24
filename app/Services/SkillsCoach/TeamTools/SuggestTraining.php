@@ -9,6 +9,8 @@ use Prism\Prism\Tool;
 
 class SuggestTraining extends Tool
 {
+    use HandlesContactability;
+
     public function __construct(
         protected CoachContext $context
     ) {
@@ -52,7 +54,7 @@ class SuggestTraining extends Tool
                 'internal_first' => [
                     'available' => true,
                     'experts' => $internalAssessment['experts'],
-                    'suggestion' => "Actually, you have internal expertise! {$internalAssessment['experts'][0]} is at High level. Have you considered asking them to teach? Internal mentoring is usually more effective than external courses.",
+                    'suggestion' => "Actually, you have internal expertise! {$internalAssessment['experts'][0]['name']} is at High level. Have you considered asking them to teach? Internal mentoring is usually more effective than external courses.",
                 ],
                 'external_options' => [
                     'note' => 'External training not recommended when internal experts exist.',
@@ -101,12 +103,11 @@ class SuggestTraining extends Tool
             }
 
             if ($userSkill->pivot->level === SkillLevel::High) {
-                $experts[] = $member->full_name;
+                $experts[] = $this->formatPersonWithContactability($member);
             } else {
-                $learners[] = [
-                    'name' => $member->full_name,
+                $learners[] = $this->formatPersonWithContactability($member, [
                     'level' => $userSkill->pivot->level->label(),
-                ];
+                ]);
             }
         }
 
@@ -115,6 +116,11 @@ class SuggestTraining extends Tool
             'experts' => $experts,
             'learners' => $learners,
         ];
+    }
+
+    protected function getContext(): CoachContext
+    {
+        return $this->context;
     }
 
     protected function buildInternalNote(array $assessment): string

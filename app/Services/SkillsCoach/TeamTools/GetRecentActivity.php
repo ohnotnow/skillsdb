@@ -9,6 +9,8 @@ use Prism\Prism\Tool;
 
 class GetRecentActivity extends Tool
 {
+    use HandlesContactability;
+
     public function __construct(
         protected CoachContext $context
     ) {
@@ -134,21 +136,19 @@ class GetRecentActivity extends Tool
                     ->orderByDesc('created_at')
                     ->first();
 
-                return [
-                    'name' => $member->full_name,
+                return $this->formatPersonWithContactability($member, [
                     'events' => 0,
                     'last_activity' => $lastActivity?->created_at->diffForHumans() ?? 'never',
                     'note' => 'Has not updated recently',
-                ];
+                ]);
             }
 
             $highlights = $userHistory->take(3)->map(fn ($h) => $this->formatEvent($h))->toArray();
 
-            return [
-                'name' => $member->full_name,
+            return $this->formatPersonWithContactability($member, [
                 'events' => $userHistory->count(),
                 'highlights' => $highlights,
-            ];
+            ]);
         })
             ->sortByDesc('events')
             ->values()
@@ -203,13 +203,17 @@ class GetRecentActivity extends Tool
                     ->orderByDesc('created_at')
                     ->first();
 
-                return [
-                    'name' => $member->full_name,
+                return $this->formatPersonWithContactability($member, [
                     'last_activity' => $lastActivity?->created_at->diffForHumans() ?? 'unknown',
-                ];
+                ]);
             })
             ->values()
             ->toArray();
+    }
+
+    protected function getContext(): CoachContext
+    {
+        return $this->context;
     }
 
     protected function generateInsight(array $summary, array $trending, array $declining): string

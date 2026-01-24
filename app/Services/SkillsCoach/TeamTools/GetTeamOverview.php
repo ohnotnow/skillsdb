@@ -10,6 +10,8 @@ use Prism\Prism\Tool;
 
 class GetTeamOverview extends Tool
 {
+    use HandlesContactability;
+
     public function __construct(
         protected CoachContext $context
     ) {
@@ -66,14 +68,18 @@ class GetTeamOverview extends Tool
 
         $lastActivity = $member->skillHistory->first()?->created_at;
 
-        return [
-            'name' => $member->full_name,
+        return $this->formatPersonWithContactability($member, [
             'org_teams' => $member->teams->pluck('name')->toArray(),
             'skill_count' => $member->skills->count(),
             'top_skills' => $topSkills,
             'recently_learning' => $recentlyLearning,
             'last_active' => $lastActivity ? $lastActivity->diffForHumans() : 'never',
-        ];
+        ]);
+    }
+
+    protected function getContext(): CoachContext
+    {
+        return $this->context;
     }
 
     protected function getRecentActivitySummary($members): string
