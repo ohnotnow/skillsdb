@@ -13,8 +13,12 @@ class CompactMatrix extends Component
 {
     public int $timelinePosition = 0;
 
-    public function mount(): void
+    // Optional: receive skills from parent to avoid duplicate query
+    public $parentSkills = null;
+
+    public function mount($skills = null): void
     {
+        $this->parentSkills = $skills;
         $this->timelinePosition = $this->timelineMax;
     }
 
@@ -84,9 +88,10 @@ class CompactMatrix extends Component
     #[Computed]
     public function skills()
     {
-        return Skill::approved()
-            ->with('category')
-            ->get()
+        // Use parent-provided skills if available, otherwise query
+        $skills = $this->parentSkills ?? Skill::approved()->with('category')->get();
+
+        return $skills
             ->sortBy([
                 fn ($a, $b) => ($a->category?->name ?? 'zzz') <=> ($b->category?->name ?? 'zzz'),
                 fn ($a, $b) => $a->name <=> $b->name,

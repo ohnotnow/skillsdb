@@ -255,7 +255,7 @@
                     Open Full Matrix
                 </flux:button>
             </div>
-            <livewire:admin.compact-matrix />
+            <livewire:admin.compact-matrix :skills="$this->approvedSkillsWithUsers" />
         </flux:tab.panel>
     </flux:tab.group>
 </div>
