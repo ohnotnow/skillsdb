@@ -3,7 +3,6 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Skill;
-use App\Models\SkillCategory;
 use App\Models\SkillHistory;
 use App\Models\User;
 use Carbon\Carbon;
@@ -110,10 +109,16 @@ class CompactMatrix extends Component
             'cyan', 'lime', 'fuchsia', 'orange', 'indigo',
         ];
 
-        $categories = SkillCategory::orderBy('name')->pluck('id')->values();
+        // Derive from skills to avoid separate query, sorted by name for consistent colors
+        $categoryIds = $this->skills
+            ->filter(fn ($s) => $s['categoryId'] !== null)
+            ->unique('categoryId')
+            ->sortBy('categoryName')
+            ->pluck('categoryId')
+            ->values();
 
         $colours = [];
-        foreach ($categories as $index => $categoryId) {
+        foreach ($categoryIds as $index => $categoryId) {
             $colours[$categoryId] = $palette[$index % count($palette)];
         }
 

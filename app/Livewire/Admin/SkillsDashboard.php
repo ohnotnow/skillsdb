@@ -57,7 +57,7 @@ class SkillsDashboard extends Component
     #[Computed]
     public function averageSkillsPerUser(): float
     {
-        $totalSkillAssignments = User::withCount('skills')->get()->sum('skills_count');
+        $totalSkillAssignments = \App\Models\SkillUser::count();
         $userCount = $this->teamMemberCount;
 
         return $userCount > 0 ? round($totalSkillAssignments / $userCount, 1) : 0;
@@ -69,19 +69,32 @@ class SkillsDashboard extends Component
         return SkillHistory::where('created_at', '>=', now()->subDays(30))->count();
     }
 
+    // Shared data - loads once, used by multiple computed properties
+
+    #[Computed]
+    public function approvedSkillsWithUsers()
+    {
+        return Skill::approved()
+            ->with(['users' => fn ($q) => $q->withPivot('level'), 'category'])
+            ->get();
+    }
+
+    #[Computed]
+    public function allCategories()
+    {
+        return SkillCategory::orderBy('name')->get();
+    }
+
     // Category strength data
 
     #[Computed]
     public function categoryStrength(): array
     {
         $totalTeamMembers = $this->teamMemberCount;
+        $skillsByCategory = $this->approvedSkillsWithUsers->groupBy('skill_category_id');
 
-        $categories = SkillCategory::with(['skills' => function ($query) {
-            $query->approved()->with('users');
-        }])->get();
-
-        return $categories->map(function ($category) use ($totalTeamMembers) {
-            $skills = $category->skills;
+        return $this->allCategories->map(function ($category) use ($totalTeamMembers, $skillsByCategory) {
+            $skills = $skillsByCategory->get($category->id, collect());
 
             // Get unique users who have any skill in this category
             $userIds = $skills->flatMap(fn ($s) => $s->users->pluck('id'))->unique();
@@ -105,10 +118,14 @@ class SkillsDashboard extends Component
             'cyan', 'lime', 'fuchsia', 'orange', 'indigo',
         ];
 
-        $categories = SkillCategory::orderBy('name')->pluck('id')->values();
+        // Derive from categoryStrength to avoid extra query, sorted by name for consistent colors
+        $categoryIds = collect($this->categoryStrength)
+            ->sortBy('name')
+            ->pluck('id')
+            ->values();
 
         $colours = [];
-        foreach ($categories as $index => $categoryId) {
+        foreach ($categoryIds as $index => $categoryId) {
             $colours[$categoryId] = $palette[$index % count($palette)];
         }
 
@@ -129,11 +146,8 @@ class SkillsDashboard extends Component
     #[Computed]
     public function needsAttention(): array
     {
-        $skills = Skill::approved()
-            ->with(['users' => function ($query) {
-                $query->withPivot('level');
-            }])
-            ->get();
+        // Use shared data instead of separate query
+        $skills = $this->approvedSkillsWithUsers;
 
         $issues = [];
 
@@ -196,30 +210,30 @@ class SkillsDashboard extends Component
     #[Computed]
     public function categoriesWithSkills(): array
     {
-        return SkillCategory::with(['skills' => function ($query) {
-            $query->approved()
-                ->with(['users' => fn ($q) => $q->withPivot('level')])
-                ->withCount('users')
-                ->orderBy('name');
-        }])
-            ->orderBy('name')
-            ->get()
-            ->map(function ($category) {
-                $skills = $category->skills->map(function ($skill) {
+        // Use shared data instead of separate query
+        $skillsByCategory = $this->approvedSkillsWithUsers
+            ->sortBy('name')
+            ->groupBy('skill_category_id');
+
+        return $this->allCategories
+            ->map(function ($category) use ($skillsByCategory) {
+                $categorySkills = $skillsByCategory->get($category->id, collect());
+
+                $skills = $categorySkills->map(function ($skill) {
                     $levelCounts = $skill->users->groupBy(fn ($u) => $u->pivot->level)
                         ->map->count();
 
                     return [
                         'id' => $skill->id,
                         'name' => $skill->name,
-                        'userCount' => $skill->users_count,
+                        'userCount' => $skill->users->count(),
                         'high' => $levelCounts[SkillLevel::High->value] ?? 0,
                         'medium' => $levelCounts[SkillLevel::Medium->value] ?? 0,
                         'low' => $levelCounts[SkillLevel::Low->value] ?? 0,
                     ];
                 });
 
-                $userIds = $category->skills->flatMap(fn ($s) => $s->users->pluck('id'))->unique();
+                $userIds = $categorySkills->flatMap(fn ($s) => $s->users->pluck('id'))->unique();
 
                 return [
                     'id' => $category->id,
@@ -275,7 +289,8 @@ class SkillsDashboard extends Component
     #[Computed]
     public function allSkillsForFilter()
     {
-        return Skill::approved()->orderBy('name')->get();
+        // Use shared data instead of separate query
+        return $this->approvedSkillsWithUsers->sortBy('name')->values();
     }
 
     public function render()
