@@ -97,7 +97,7 @@
                                     type="button"
                                     class="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs sm:text-sm rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors cursor-pointer"
                                     x-text="suggestion"
-                                    @click="$wire.set('prompt', suggestion); $nextTick(() => $wire.send())"
+                                    @click="$wire.set('prompt', suggestion)"
                                 ></button>
                             </template>
                         </div>
@@ -111,6 +111,11 @@
     @if ($team)
         <form wire:submit="send">
             <flux:composer wire:model="prompt" label="Message" label:sr-only placeholder="Ask about your team's skills...">
+                <x-slot name="actionsLeading">
+                    <flux:button size="sm" variant="subtle" icon="paper-clip" />
+                    <flux:button size="sm" variant="subtle" icon="slash" />
+                    <flux:button size="sm" variant="subtle" icon="adjustments-horizontal" />
+                </x-slot>
                 <x-slot name="actionsTrailing">
                     <flux:button type="submit" size="sm" variant="primary" icon="paper-airplane" />
                 </x-slot>

@@ -73,8 +73,6 @@ class TeamCoach extends Component
             'role' => 'assistant',
             'content' => $response->content,
         ];
-
-        $this->resetValidation();
     }
 
     public function clearChat(): void

@@ -79,7 +79,7 @@
                                 type="button"
                                 class="px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs sm:text-sm rounded-full hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors cursor-pointer"
                                 x-text="suggestion"
-                                @click="$wire.set('prompt', suggestion); $nextTick(() => $wire.send())"
+                                @click="$wire.set('prompt', suggestion)"
                             ></button>
                         </template>
                     </div>
