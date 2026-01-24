@@ -1,4 +1,15 @@
-<div class="flex flex-col h-[calc(100vh-12rem)] max-w-3xl mx-auto" x-data="{ suggestions: ['What are our biggest skill gaps?', 'Who could mentor someone in Kubernetes?', 'Any single points of failure?', 'Show me recent team activity'] }">
+<div class="flex flex-col h-[calc(100vh-12rem)] max-w-3xl mx-auto" x-data="{ suggestions: ['What are our biggest skill gaps?', 'Who could mentor someone in Kubernetes?', 'Any single points of failure?', 'Show me recent team activity'] }"
+    x-init="
+        $wire.on('message-sent', () => {
+            $nextTick(() => $refs.chatArea.scrollTop = $refs.chatArea.scrollHeight);
+        });
+        $wire.on('message-received', () => {
+            $nextTick(() => {
+                $refs.chatArea.scrollTop = $refs.chatArea.scrollHeight;
+                $refs.composer.querySelector('textarea')?.focus();
+            });
+        });
+    ">
 
     {{-- Header --}}
     <div class="flex items-center justify-between gap-4 mb-6">
@@ -34,7 +45,7 @@
     <flux:separator variant="subtle" class="mb-6" />
 
     {{-- Chat Area --}}
-    <div class="flex-1 overflow-y-auto mb-6 space-y-5">
+    <div x-ref="chatArea" class="flex-1 overflow-y-auto mb-6 space-y-5">
         @if (!$team)
             {{-- No Team State --}}
             <div class="flex items-center justify-center h-full min-h-64 px-4">
@@ -109,7 +120,7 @@
 
     {{-- Composer --}}
     @if ($team)
-        <form wire:submit="send">
+        <form x-ref="composer" wire:submit="send">
             <flux:composer wire:model="prompt" label="Message" label:sr-only placeholder="Ask about your team's skills...">
                 <x-slot name="actionsLeading">
                     <flux:button size="sm" variant="subtle" icon="paper-clip" />

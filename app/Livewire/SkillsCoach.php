@@ -38,6 +38,8 @@ class SkillsCoach extends Component
             'content' => $this->prompt,
         ];
 
+        $this->dispatch('message-sent');
+
         $prompt = $this->prompt;
         $this->reset('prompt');
 
@@ -52,6 +54,8 @@ class SkillsCoach extends Component
             'role' => 'assistant',
             'content' => $response->content,
         ];
+
+        $this->dispatch('message-received');
     }
 
     public function clearChat(CoachService $coach): void

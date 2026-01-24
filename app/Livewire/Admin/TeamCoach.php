@@ -59,6 +59,8 @@ class TeamCoach extends Component
             'content' => $this->prompt,
         ];
 
+        $this->dispatch('message-sent');
+
         $prompt = $this->prompt;
         $this->reset('prompt');
 
@@ -73,6 +75,8 @@ class TeamCoach extends Component
             'role' => 'assistant',
             'content' => $response->content,
         ];
+
+        $this->dispatch('message-received');
     }
 
     public function clearChat(): void

@@ -1,4 +1,15 @@
-<div class="flex flex-col h-[calc(100vh-12rem)] max-w-3xl mx-auto" x-data="{ suggestions: ['What should I learn next?', 'Who else knows Kubernetes?', 'Help me level up in Python', 'What\'s trending on the team?'] }">
+<div class="flex flex-col h-[calc(100vh-12rem)] max-w-3xl mx-auto" x-data="{ suggestions: ['What should I learn next?', 'Who else knows Kubernetes?', 'Help me level up in Python', 'What\'s trending on the team?'] }"
+    x-init="
+        $wire.on('message-sent', () => {
+            $nextTick(() => $refs.chatArea.scrollTop = $refs.chatArea.scrollHeight);
+        });
+        $wire.on('message-received', () => {
+            $nextTick(() => {
+                $refs.chatArea.scrollTop = $refs.chatArea.scrollHeight;
+                $refs.composer.querySelector('textarea')?.focus();
+            });
+        });
+    ">
 
     {{-- Header --}}
     <div class="flex items-center justify-between gap-4 mb-6">
@@ -30,7 +41,7 @@
     <flux:separator variant="subtle" class="mb-6" />
 
     {{-- Chat Area --}}
-    <div class="flex-1 overflow-y-auto mb-6 space-y-5">
+    <div x-ref="chatArea" class="flex-1 overflow-y-auto mb-6 space-y-5">
         @forelse ($messages as $index => $message)
             @if ($message['role'] === 'user')
                 {{-- User Message --}}
@@ -88,8 +99,8 @@
         @endforelse
     </div>
 
-    {{-- Composer - kept exactly as original --}}
-    <form wire:submit="send">
+    {{-- Composer --}}
+    <form x-ref="composer" wire:submit="send">
         <flux:composer wire:model="prompt" label="Message" label:sr-only placeholder="Ask me about your skills...">
             <x-slot name="actionsLeading">
                 <flux:button size="sm" variant="subtle" icon="paper-clip" />
