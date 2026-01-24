@@ -66,8 +66,8 @@
                         <div class="shrink-0 w-7 h-7 mt-1.5 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center shadow-md shadow-indigo-500/20">
                             <flux:icon name="user-group" variant="micro" class="w-3.5 h-3.5 text-white" />
                         </div>
-                        <div class="bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl px-4 py-2.5 border border-indigo-200/50 dark:border-indigo-800/30">
-                            <p class="text-zinc-700 dark:text-zinc-300 text-sm sm:text-base leading-relaxed whitespace-pre-line">{{ $message['content'] }}</p>
+                        <div class="bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl px-4 py-2.5 border border-indigo-200/50 dark:border-indigo-800/30 coach-markdown text-zinc-700 dark:text-zinc-300 text-sm sm:text-base leading-relaxed">
+                            {!! Str::markdown($message['content'], ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
                         </div>
                     </div>
                 @endif

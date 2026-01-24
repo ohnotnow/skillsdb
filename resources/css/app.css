@@ -30,3 +30,18 @@
     animation: level-up 0.6s ease-out;
 }
 
+/* Markdown styling for coach responses */
+.coach-markdown h1 { font-size: 1.25em; font-weight: 600; margin-top: 1em; margin-bottom: 0.5em; }
+.coach-markdown h2 { font-size: 1.125em; font-weight: 600; margin-top: 1em; margin-bottom: 0.5em; }
+.coach-markdown h3 { font-size: 1em; font-weight: 600; margin-top: 0.75em; margin-bottom: 0.25em; }
+.coach-markdown p { margin-bottom: 0.75em; }
+.coach-markdown p:last-child { margin-bottom: 0; }
+.coach-markdown ul, .coach-markdown ol { margin-left: 1.5em; margin-bottom: 0.75em; }
+.coach-markdown ul { list-style-type: disc; }
+.coach-markdown ol { list-style-type: decimal; }
+.coach-markdown li { margin-bottom: 0.25em; }
+.coach-markdown strong { font-weight: 600; }
+.coach-markdown code { background: rgba(0,0,0,0.05); padding: 0.1em 0.3em; border-radius: 0.25em; font-size: 0.9em; }
+.dark .coach-markdown code { background: rgba(255,255,255,0.1); }
+.coach-markdown a { text-decoration: underline; }
+
