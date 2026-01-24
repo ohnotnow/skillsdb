@@ -42,46 +42,44 @@ class CompactMatrix extends Component
     {
         $viewingDate = $this->viewingDate;
 
+        // Batch fetch: get all skill history up to viewing date in one query
+        $allHistory = SkillHistory::where('created_at', '<=', $viewingDate)
+            ->orderBy('created_at')
+            ->get()
+            ->groupBy('user_id');
+
         return User::query()
             ->orderBy('surname')
             ->orderBy('forenames')
             ->get()
-            ->map(fn ($user) => [
-                'id' => $user->id,
-                'initials' => $this->getInitials($user->forenames, $user->surname),
-                'fullName' => $user->full_name,
-                'skills' => $this->getUserSkillsAt($user, $viewingDate),
-            ]);
+            ->map(function ($user) use ($allHistory) {
+                $userHistory = $allHistory->get($user->id, collect());
+
+                return [
+                    'id' => $user->id,
+                    'initials' => $this->getInitials($user->forenames, $user->surname),
+                    'fullName' => $user->full_name,
+                    'skills' => $this->getUserSkillsFromHistory($userHistory),
+                ];
+            });
     }
 
-    private function getUserSkillsAt(User $user, Carbon $date): array
+    private function getUserSkillsFromHistory($userHistory): array
     {
-        $skills = Skill::approved()->pluck('id');
         $result = [];
 
-        foreach ($skills as $skillId) {
-            $level = $this->getSkillLevelAt($user->id, $skillId, $date);
-            if ($level !== null) {
-                $result[$skillId] = $level;
+        // Group by skill_id and take the last (most recent) event for each
+        $bySkill = $userHistory->groupBy('skill_id');
+
+        foreach ($bySkill as $skillId => $events) {
+            $latestEvent = $events->last();
+
+            if ($latestEvent && $latestEvent->event_type !== \App\Enums\SkillHistoryEvent::Removed) {
+                $result[$skillId] = $latestEvent->new_level;
             }
         }
 
         return $result;
-    }
-
-    private function getSkillLevelAt(int $userId, int $skillId, Carbon $date): ?int
-    {
-        $latestEvent = SkillHistory::where('user_id', $userId)
-            ->where('skill_id', $skillId)
-            ->where('created_at', '<=', $date)
-            ->orderByDesc('created_at')
-            ->first();
-
-        if (! $latestEvent || $latestEvent->event_type === \App\Enums\SkillHistoryEvent::Removed) {
-            return null;
-        }
-
-        return $latestEvent->new_level;
     }
 
     #[Computed]

@@ -237,7 +237,7 @@ class SkillsDashboard extends Component
     #[Computed]
     public function teamMembers(): array
     {
-        return User::query()
+        $users = User::query()
             ->withCount('skills')
             ->with(['skills' => fn ($q) => $q->withPivot('level')])
             ->when($this->teamSearch, function ($query) {
@@ -251,22 +251,25 @@ class SkillsDashboard extends Component
             })
             ->orderBy('surname')
             ->orderBy('forenames')
-            ->get()
-            ->map(function ($user) {
-                $distribution = $user->getSkillDistribution();
+            ->get();
 
-                return [
-                    'id' => $user->id,
-                    'name' => $user->full_name,
-                    'skillCount' => $user->skills_count,
-                    'high' => $distribution['high'],
-                    'medium' => $distribution['medium'],
-                    'low' => $distribution['low'],
-                    'lastUpdated' => $user->getLastUpdatedText(),
-                    'isStale' => $user->hasStaleSkills(),
-                ];
-            })
-            ->toArray();
+        return $users->map(function ($user) {
+            // Use eager-loaded skills collection instead of querying
+            $levelCounts = $user->skills
+                ->groupBy(fn ($skill) => $skill->pivot->level->value)
+                ->map->count();
+
+            return [
+                'id' => $user->id,
+                'name' => $user->full_name,
+                'skillCount' => $user->skills_count,
+                'high' => $levelCounts[SkillLevel::High->value] ?? 0,
+                'medium' => $levelCounts[SkillLevel::Medium->value] ?? 0,
+                'low' => $levelCounts[SkillLevel::Low->value] ?? 0,
+                'lastUpdated' => $user->getLastUpdatedText(),
+                'isStale' => $user->hasStaleSkills(),
+            ];
+        })->toArray();
     }
 
     #[Computed]
