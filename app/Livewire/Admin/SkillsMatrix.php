@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Admin;
 
+use App\Enums\SkillHistoryEvent;
+use App\Enums\SkillLevel;
 use App\Models\Skill;
 use App\Models\SkillCategory;
 use App\Models\SkillHistory;
@@ -51,6 +53,10 @@ class SkillsMatrix extends Component
     #[Computed]
     public function users()
     {
+        if (empty($this->selectedUsers) && empty($this->selectedSkills)) {
+            return $this->allUsers->load('skills');
+        }
+
         return User::with('skills')
             ->when($this->selectedUsers, fn ($q) => $q->whereIn('id', $this->selectedUsers))
             ->when($this->selectedSkills, fn ($q) => $q->whereHas('skills', fn ($q) => $q->whereIn('skill_id', $this->selectedSkills)))
@@ -110,6 +116,48 @@ class SkillsMatrix extends Component
     public function allSkills()
     {
         return Skill::approved()->orderBy('name')->get();
+    }
+
+    /**
+     * Pre-compute all skill levels at the viewing date in a single query.
+     * Returns a nested array: [user_id => [skill_id => SkillLevel]]
+     *
+     * @return array<int, array<int, SkillLevel>>
+     */
+    #[Computed]
+    public function skillLevelsAtDate(): array
+    {
+        $userIds = $this->users->pluck('id');
+        $skillIds = $this->skills->pluck('id');
+
+        if ($userIds->isEmpty() || $skillIds->isEmpty()) {
+            return [];
+        }
+
+        $history = SkillHistory::whereIn('user_id', $userIds)
+            ->whereIn('skill_id', $skillIds)
+            ->where('created_at', '<=', $this->viewingDate)
+            ->orderBy('created_at')
+            ->get();
+
+        $levels = [];
+        $grouped = $history->groupBy(fn ($h) => "{$h->user_id}-{$h->skill_id}");
+
+        foreach ($grouped as $key => $events) {
+            $latest = $events->last();
+            [$userId, $skillId] = explode('-', $key);
+
+            if ($latest->event_type !== SkillHistoryEvent::Removed && $latest->new_level) {
+                $levels[(int) $userId][(int) $skillId] = SkillLevel::from($latest->new_level);
+            }
+        }
+
+        return $levels;
+    }
+
+    public function getSkillLevelAtDate(int $userId, int $skillId): ?SkillLevel
+    {
+        return $this->skillLevelsAtDate[$userId][$skillId] ?? null;
     }
 
     public function export(): StreamedResponse

@@ -19,6 +19,7 @@
             </flux:select>
 
             <flux:button wire:click="export" icon="arrow-down-tray">Export</flux:button>
+            <flux:button :href="route('admin.team-coach')" icon="user-group" variant="primary">Team Coach</flux:button>
         </div>
     </div>
 
@@ -78,7 +79,7 @@
                         @php
                             $catColour = $this->getCategoryColour($skill->skill_category_id);
                             $emptyClass = $colourClasses[$catColour]['empty'] ?? $colourClasses['zinc']['empty'];
-                            $levelClass = $user->getSkillLevelAt($skill, $this->viewingDate)?->bgClass();
+                            $levelClass = $this->getSkillLevelAtDate($user->id, $skill->id)?->bgClass();
                         @endphp
                         <div
                             wire:key="cell-{{ $user->id }}-{{ $skill->id }}"

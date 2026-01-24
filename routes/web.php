@@ -4,6 +4,7 @@ use App\Livewire\Admin\ApiTokensManager;
 use App\Livewire\Admin\SkillsDashboard;
 use App\Livewire\Admin\SkillsManager;
 use App\Livewire\Admin\SkillsMatrix;
+use App\Livewire\Admin\TeamCoach;
 use App\Livewire\Admin\TrainingCoursesManager;
 use App\Livewire\Admin\UserSkillsEditor;
 use App\Livewire\Admin\UserSkillsManager;
@@ -27,5 +28,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard', SkillsDashboard::class)->name('dashboard');
         Route::get('/api-tokens', ApiTokensManager::class)->name('api-tokens');
         Route::get('/training', TrainingCoursesManager::class)->name('training');
+        Route::get('/team-coach', TeamCoach::class)->name('team-coach');
     });
 });

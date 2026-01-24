@@ -7,6 +7,12 @@ use App\Services\SkillsCoach\CoachContext;
 use App\Services\SkillsCoach\Contracts\LlmProvider;
 use App\Services\SkillsCoach\SystemPrompt;
 use App\Services\SkillsCoach\TeamSystemPrompt;
+use App\Services\SkillsCoach\TeamTools\FindBackupFor;
+use App\Services\SkillsCoach\TeamTools\FindMentoringPairs;
+use App\Services\SkillsCoach\TeamTools\GetMemberSkills;
+use App\Services\SkillsCoach\TeamTools\GetRecentActivity;
+use App\Services\SkillsCoach\TeamTools\GetTeamOverview;
+use App\Services\SkillsCoach\TeamTools\SuggestTraining;
 use App\Services\SkillsCoach\Tools\FindExperts;
 use App\Services\SkillsCoach\Tools\FindSkillSharers;
 use App\Services\SkillsCoach\Tools\GetSkillJourney;
@@ -116,11 +122,13 @@ class PrismProvider implements LlmProvider
      */
     protected function buildTeamTools(): array
     {
-        // Team tools - more will be added in Phase 3
         return [
-            Tool::make(GetTeamGaps::class),
-            Tool::make(FindExperts::class),
-            Tool::make(GetTrendingSkills::class),
+            Tool::make(GetTeamOverview::class),
+            Tool::make(FindBackupFor::class),
+            Tool::make(FindMentoringPairs::class),
+            Tool::make(GetMemberSkills::class),
+            Tool::make(GetRecentActivity::class),
+            Tool::make(SuggestTraining::class),
         ];
     }
 }

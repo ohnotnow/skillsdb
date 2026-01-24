@@ -24,6 +24,9 @@
                 </flux:sidebar.header>
                 <flux:sidebar.nav>
                     <flux:sidebar.item icon="home" href="/" wire:navigate>My Skills</flux:sidebar.item>
+                    @if (auth()->user()->isTeamManager())
+                        <flux:sidebar.item icon="user-group" href="/admin/team-coach" wire:navigate>Team Coach</flux:sidebar.item>
+                    @endif
                     @if (auth()->user()->isAdmin())
                         <flux:separator class="my-2" />
                         <flux:sidebar.item icon="wrench-screwdriver" href="/admin/skills" wire:navigate>Manage Skills</flux:sidebar.item>
