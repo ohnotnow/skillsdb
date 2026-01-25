@@ -109,7 +109,7 @@ class SSOController extends Controller
 
     private function getSuccessRedirect(): RedirectResponse|LivewireRedirector
     {
-        return redirect()->intended(route('dashboard'));
+        return redirect()->intended(route('home'));
     }
 
     private function forbidsStudentsFromLoggingIn(\Laravel\Socialite\Contracts\User $ssoUser): bool
