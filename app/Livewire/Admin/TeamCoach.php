@@ -8,6 +8,7 @@ use App\Models\Team;
 use App\Services\SkillsCoach\CoachContext;
 use App\Services\SkillsCoach\CoachService;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
@@ -97,13 +98,20 @@ class TeamCoach extends Component
         $this->reset('messages');
     }
 
+    #[On('conversation-selected')]
+    public function switchConversation(int $conversationId): void
+    {
+        $this->conversationId = $conversationId;
+        $this->loadConversation();
+    }
+
     protected function loadConversation(): void
     {
         $user = auth()->user();
 
-        $conversation = $user->coachConversations()
-            ->forTeam($this->teamId)
-            ->first();
+        $conversation = $this->conversationId
+            ? $user->coachConversations()->find($this->conversationId)
+            : $user->coachConversations()->forTeam($this->teamId)->first();
 
         if ($conversation) {
             $this->conversationId = $conversation->id;
@@ -115,6 +123,8 @@ class TeamCoach extends Component
                     'content' => $m->content,
                 ])
                 ->toArray();
+        } else {
+            $this->reset('messages');
         }
     }
 

@@ -136,3 +136,33 @@ it('shows homepage link with skills coach button', function () {
         ->assertSuccessful()
         ->assertSee('Skills Coach');
 });
+
+it('can switch to a different conversation', function () {
+    $user = User::factory()->create();
+
+    $conversation1 = CoachConversation::factory()->create(['user_id' => $user->id]);
+    CoachMessage::factory()->create([
+        'coach_conversation_id' => $conversation1->id,
+        'role' => CoachMessageRole::User,
+        'content' => 'First conversation message',
+    ]);
+
+    $conversation2 = CoachConversation::factory()->create(['user_id' => $user->id]);
+    CoachMessage::factory()->create([
+        'coach_conversation_id' => $conversation2->id,
+        'role' => CoachMessageRole::User,
+        'content' => 'Second conversation message',
+    ]);
+
+    // Start with conversation1 loaded, then switch to conversation2
+    Livewire::actingAs($user)
+        ->test(SkillsCoach::class)
+        ->set('conversationId', $conversation1->id)
+        ->call('switchConversation', $conversation1->id)
+        ->assertSee('First conversation message')
+        ->assertDontSee('Second conversation message')
+        ->call('switchConversation', $conversation2->id)
+        ->assertSee('Second conversation message')
+        ->assertDontSee('First conversation message')
+        ->assertSet('conversationId', $conversation2->id);
+});

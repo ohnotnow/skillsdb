@@ -6,6 +6,7 @@ use App\Enums\CoachMode;
 use App\Models\CoachConversation;
 use App\Services\SkillsCoach\CoachService;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
@@ -69,10 +70,20 @@ class SkillsCoach extends Component
         $this->reset('messages');
     }
 
+    #[On('conversation-selected')]
+    public function switchConversation(int $conversationId): void
+    {
+        $this->conversationId = $conversationId;
+        $this->loadConversation();
+    }
+
     protected function loadConversation(): void
     {
         $user = auth()->user();
-        $conversation = $user->coachConversations()->personal()->first();
+
+        $conversation = $this->conversationId
+            ? $user->coachConversations()->find($this->conversationId)
+            : $user->coachConversations()->personal()->first();
 
         if ($conversation) {
             $this->conversationId = $conversation->id;
@@ -84,6 +95,8 @@ class SkillsCoach extends Component
                     'content' => $m->content,
                 ])
                 ->toArray();
+        } else {
+            $this->reset('messages');
         }
     }
 

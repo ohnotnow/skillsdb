@@ -19,4 +19,7 @@
     :disabled="!$team"
     disabled-heading="No team to coach"
     disabled-description="You don't manage any teams yet. Contact an admin to set up your team."
+    :mode="\App\Enums\CoachMode::Team"
+    :team-id="$teamId"
+    :conversation-id="$conversationId"
 />

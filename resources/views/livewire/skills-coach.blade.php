@@ -11,4 +11,6 @@
     placeholder="Ask me about your skills..."
     :suggestions="['What should I learn next?', 'Who else knows Kubernetes?', 'Help me level up in Python', 'What\'s trending on the team?']"
     :messages="$messages"
+    :mode="\App\Enums\CoachMode::Personal"
+    :conversation-id="$conversationId"
 />

@@ -19,6 +19,9 @@
     'disabled' => false,
     'disabledHeading' => 'Unavailable',
     'disabledDescription' => 'This coach is not available right now.',
+    'mode' => null,
+    'teamId' => null,
+    'conversationId' => null,
 ])
 
 <div class="flex flex-col h-[calc(100vh-12rem)] max-w-3xl mx-auto" x-data="{ suggestions: @js($suggestions) }"
@@ -52,6 +55,13 @@
             </div>
         </div>
         <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+            @if ($mode)
+                <flux:modal.trigger name="conversation-history">
+                    <flux:button variant="subtle" icon="clock" size="sm" class="max-sm:!px-2">
+                        <span class="hidden sm:inline">History</span>
+                    </flux:button>
+                </flux:modal.trigger>
+            @endif
             @if (count($messages) > 0)
                 <flux:button wire:click="clearChat" variant="subtle" icon="arrow-path" size="sm" class="max-sm:!px-2">
                     <span class="hidden sm:inline">New chat</span>
@@ -155,4 +165,18 @@
             <flux:error name="prompt" class="mt-2" />
         </form>
     @endunless
+
+    {{-- Conversation History Modal --}}
+    @if ($mode)
+        <flux:modal name="conversation-history" variant="flyout" class="w-96">
+            <flux:heading size="lg">Conversation History</flux:heading>
+            <flux:text class="mt-1 mb-4">Select a previous conversation to continue.</flux:text>
+
+            <livewire:conversation-history
+                :mode="$mode"
+                :team-id="$teamId"
+                :current-conversation-id="$conversationId"
+            />
+        </flux:modal>
+    @endif
 </div>
