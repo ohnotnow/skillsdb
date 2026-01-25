@@ -171,3 +171,54 @@ it('can switch to a different conversation', function () {
     expect($component->get('messages'))->toHaveCount(1);
     expect($component->get('messages')[0]['content'])->toBe('Second conversation message');
 });
+
+it('can export conversation as json', function () {
+    $user = User::factory()->create();
+    $conversation = CoachConversation::factory()->create(['user_id' => $user->id]);
+    CoachMessage::factory()->create([
+        'coach_conversation_id' => $conversation->id,
+        'role' => CoachMessageRole::User,
+        'content' => 'Test question',
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(SkillsCoach::class)
+        ->call('exportConversation', 'json')
+        ->assertFileDownloaded('coach-chat-'.$conversation->created_at->format('Y-m-d').'.json');
+});
+
+it('can export conversation as markdown', function () {
+    $user = User::factory()->create();
+    $conversation = CoachConversation::factory()->create(['user_id' => $user->id]);
+    CoachMessage::factory()->create([
+        'coach_conversation_id' => $conversation->id,
+        'role' => CoachMessageRole::User,
+        'content' => 'Test question',
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(SkillsCoach::class)
+        ->call('exportConversation', 'markdown')
+        ->assertFileDownloaded('coach-chat-'.$conversation->created_at->format('Y-m-d').'.md');
+});
+
+it('returns null when exporting with no active conversation', function () {
+    $user = User::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(SkillsCoach::class)
+        ->set('conversationId', null)
+        ->call('exportConversation', 'json')
+        ->assertNoRedirect();
+});
+
+it('cannot export another users conversation', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $otherConversation = CoachConversation::factory()->create(['user_id' => $otherUser->id]);
+
+    Livewire::actingAs($user)
+        ->test(SkillsCoach::class)
+        ->set('conversationId', $otherConversation->id)
+        ->call('exportConversation', 'json');
+})->throws(Illuminate\Database\Eloquent\ModelNotFoundException::class);

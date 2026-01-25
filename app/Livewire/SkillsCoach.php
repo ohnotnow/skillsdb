@@ -3,16 +3,25 @@
 namespace App\Livewire;
 
 use App\Enums\CoachMode;
+use App\Livewire\Concerns\HasCoachConversations;
 use App\Models\CoachConversation;
 use App\Services\SkillsCoach\CoachService;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\On;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
 class SkillsCoach extends Component
 {
+    use HasCoachConversations;
+
     public string $prompt = '';
+
+    // Required by HasCoachConversations trait
+    protected string $exportPrefix = 'coach-chat-';
+
+    protected string $exportTitle = 'Skills Coach Conversation';
+
+    protected array $exportEagerLoads = ['messages'];
 
     public array $messages = [];
 
@@ -67,20 +76,6 @@ class SkillsCoach extends Component
             'mode' => CoachMode::Personal,
         ]);
         $this->conversationId = $conversation->id;
-        $this->reset('messages');
-    }
-
-    #[On('conversation-selected')]
-    public function switchConversation(int $conversationId): void
-    {
-        $this->conversationId = $conversationId;
-        $this->loadConversation();
-    }
-
-    #[On('conversation-deleted-active')]
-    public function handleActiveConversationDeleted(): void
-    {
-        $this->conversationId = null;
         $this->reset('messages');
     }
 

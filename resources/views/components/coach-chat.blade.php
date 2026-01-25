@@ -63,6 +63,19 @@
                 </flux:modal.trigger>
             @endif
             @if (count($messages) > 0)
+                <flux:dropdown>
+                    <flux:button variant="subtle" icon="arrow-down-tray" size="sm" class="max-sm:!px-2">
+                        <span class="hidden sm:inline">Export</span>
+                    </flux:button>
+                    <flux:menu>
+                        <flux:menu.item wire:click="exportConversation('json')" icon="code-bracket">
+                            Export as JSON
+                        </flux:menu.item>
+                        <flux:menu.item wire:click="exportConversation('markdown')" icon="document-text">
+                            Export as Markdown
+                        </flux:menu.item>
+                    </flux:menu>
+                </flux:dropdown>
                 <flux:button wire:click="clearChat" variant="subtle" icon="arrow-path" size="sm" class="max-sm:!px-2">
                     <span class="hidden sm:inline">New chat</span>
                 </flux:button>

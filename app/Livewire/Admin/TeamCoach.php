@@ -3,17 +3,19 @@
 namespace App\Livewire\Admin;
 
 use App\Enums\CoachMode;
+use App\Livewire\Concerns\HasCoachConversations;
 use App\Models\CoachConversation;
 use App\Models\Team;
 use App\Services\SkillsCoach\CoachContext;
 use App\Services\SkillsCoach\CoachService;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\On;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
 class TeamCoach extends Component
 {
+    use HasCoachConversations;
+
     public string $prompt = '';
 
     public array $messages = [];
@@ -21,6 +23,13 @@ class TeamCoach extends Component
     public ?int $conversationId = null;
 
     public ?int $teamId = null;
+
+    // Required by HasCoachConversations trait
+    protected string $exportPrefix = 'team-coach-chat-';
+
+    protected string $exportTitle = 'Team Coach Conversation';
+
+    protected array $exportEagerLoads = ['messages', 'team'];
 
     public function mount(): void
     {
@@ -98,18 +107,28 @@ class TeamCoach extends Component
         $this->reset('messages');
     }
 
-    #[On('conversation-selected')]
-    public function switchConversation(int $conversationId): void
+    protected function getJsonConversationData(CoachConversation $conversation): array
     {
-        $this->conversationId = $conversationId;
-        $this->loadConversation();
+        return [
+            'id' => $conversation->id,
+            'mode' => 'team',
+            'team' => $conversation->team?->name,
+            'created_at' => $conversation->created_at->toIso8601String(),
+            'messages' => $conversation->messages->map(fn ($m) => [
+                'role' => $m->role->value,
+                'content' => $m->content,
+                'created_at' => $m->created_at->toIso8601String(),
+            ])->toArray(),
+        ];
     }
 
-    #[On('conversation-deleted-active')]
-    public function handleActiveConversationDeleted(): void
+    protected function getMarkdownHeader(CoachConversation $conversation): string
     {
-        $this->conversationId = null;
-        $this->reset('messages');
+        return "# {$this->exportTitle}\n\n"
+            .'Team: '.$conversation->team?->name."\n"
+            .'Exported: '.now()->format('F j, Y g:ia')."\n"
+            .'Started: '.$conversation->created_at->format('F j, Y g:ia')."\n\n"
+            ."---\n\n";
     }
 
     protected function loadConversation(): void
