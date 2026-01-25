@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -70,7 +71,7 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(TrainingCourse::class, 'training_course_user')
             ->using(TrainingCourseUser::class)
-            ->withPivot(['status', 'rating'])
+            ->withPivot(['status', 'rating', 'requested_at', 'approved_by', 'approved_at', 'rejection_reason'])
             ->withTimestamps();
     }
 
@@ -107,6 +108,18 @@ class User extends Authenticatable
     public function isTeamManager(): bool
     {
         return $this->managedTeams()->exists();
+    }
+
+    /**
+     * Get all managers of teams this user belongs to.
+     *
+     * @return Collection<int, User>
+     */
+    public function getManagers(): Collection
+    {
+        $managerIds = $this->teams()->pluck('manager_id')->filter()->unique();
+
+        return User::whereIn('id', $managerIds)->get();
     }
 
     public function touchSkillsUpdatedAt(): void

@@ -104,6 +104,18 @@
                                         @endforeach
                                     </div>
                                 </div>
+                            @elseif ($course->users->first()->pivot->status === \App\Enums\EnrollmentStatus::PendingApproval)
+                                <div class="space-y-1">
+                                    <flux:badge size="sm" color="sky">Pending Approval</flux:badge>
+                                    <flux:text size="sm" class="text-zinc-500">Awaiting manager approval</flux:text>
+                                </div>
+                            @elseif ($course->users->first()->pivot->status === \App\Enums\EnrollmentStatus::Rejected)
+                                <div class="space-y-1">
+                                    <flux:badge size="sm" color="red">Rejected</flux:badge>
+                                    @if ($course->users->first()->pivot->rejection_reason)
+                                        <flux:text size="sm" class="text-zinc-500">{{ $course->users->first()->pivot->rejection_reason }}</flux:text>
+                                    @endif
+                                </div>
                             @endif
                         </div>
                     </div>

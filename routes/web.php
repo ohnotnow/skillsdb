@@ -9,6 +9,7 @@ use App\Livewire\Admin\TrainingCoursesManager;
 use App\Livewire\Admin\UserSkillsEditor;
 use App\Livewire\Admin\UserSkillsManager;
 use App\Livewire\HomePage;
+use App\Livewire\Manager\PendingTrainingRequests;
 use App\Livewire\PlaySpace;
 use App\Livewire\SkillsCoach;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/', HomePage::class)->name('home');
     Route::get('/coach', SkillsCoach::class)->name('coach');
     Route::get('/play', PlaySpace::class)->name('play');
+    Route::get('/manager/training-requests', PendingTrainingRequests::class)->name('manager.training-requests');
 
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/skills', SkillsManager::class)->name('skills');

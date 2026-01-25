@@ -3,10 +3,13 @@
 use App\Enums\EnrollmentStatus;
 use App\Enums\TrainingRating;
 use App\Livewire\TrainingBrowser;
+use App\Mail\TrainingApprovalRequested;
 use App\Models\Skill;
+use App\Models\Team;
 use App\Models\TrainingCourse;
 use App\Models\TrainingSupplier;
 use App\Models\User;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 
 it('displays active courses', function () {
@@ -147,9 +150,9 @@ it('can filter to show only enrolled courses', function () {
         ->assertDontSee('Not Enrolled Course');
 });
 
-it('can enroll in a course', function () {
+it('can enroll in a free course immediately', function () {
     $user = User::factory()->create();
-    $course = TrainingCourse::factory()->create(['name' => 'Test Course']);
+    $course = TrainingCourse::factory()->free()->create(['name' => 'Test Course']);
 
     Livewire::actingAs($user)
         ->test(TrainingBrowser::class)
@@ -159,9 +162,9 @@ it('can enroll in a course', function () {
     expect($user->trainingCourses->first()->pivot->status)->toBe(EnrollmentStatus::Booked);
 });
 
-it('shows Mark Complete button after enrollment', function () {
+it('shows Mark Complete button after enrolling in free course', function () {
     $user = User::factory()->create();
-    $course = TrainingCourse::factory()->create(['name' => 'Test Course']);
+    $course = TrainingCourse::factory()->free()->create(['name' => 'Test Course']);
 
     Livewire::actingAs($user)
         ->test(TrainingBrowser::class)
@@ -295,4 +298,69 @@ it('shows no courses message when no courses match filters', function () {
     Livewire::actingAs($user)
         ->test(TrainingBrowser::class)
         ->assertSee('No courses found');
+});
+
+it('enrolls immediately on free courses without sending email', function () {
+    Mail::fake();
+    $user = User::factory()->create();
+    $course = TrainingCourse::factory()->free()->create();
+
+    Livewire::actingAs($user)
+        ->test(TrainingBrowser::class)
+        ->call('enroll', $course->id);
+
+    expect($user->fresh()->trainingCourses)->toHaveCount(1);
+    expect($user->trainingCourses->first()->pivot->status)->toBe(EnrollmentStatus::Booked);
+    Mail::assertNothingSent();
+});
+
+it('creates pending approval for paid courses', function () {
+    Mail::fake();
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $user = User::factory()->create();
+    $user->teams()->attach($team);
+    $course = TrainingCourse::factory()->create(['cost' => '500']);
+
+    Livewire::actingAs($user)
+        ->test(TrainingBrowser::class)
+        ->call('enroll', $course->id);
+
+    expect($user->fresh()->trainingCourses)->toHaveCount(1);
+    expect($user->trainingCourses->first()->pivot->status)->toBe(EnrollmentStatus::PendingApproval);
+    expect($user->trainingCourses->first()->pivot->requested_at)->not->toBeNull();
+});
+
+it('sends notification to managers for paid course enrollment', function () {
+    Mail::fake();
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $user = User::factory()->create();
+    $user->teams()->attach($team);
+    $course = TrainingCourse::factory()->create(['cost' => '500']);
+
+    Livewire::actingAs($user)
+        ->test(TrainingBrowser::class)
+        ->call('enroll', $course->id);
+
+    Mail::assertQueued(TrainingApprovalRequested::class, function ($mail) use ($manager) {
+        return $mail->hasTo($manager->email);
+    });
+});
+
+it('sends notification to all managers when user is in multiple teams', function () {
+    Mail::fake();
+    $manager1 = User::factory()->create();
+    $manager2 = User::factory()->create();
+    $team1 = Team::factory()->create(['manager_id' => $manager1->id]);
+    $team2 = Team::factory()->create(['manager_id' => $manager2->id]);
+    $user = User::factory()->create();
+    $user->teams()->attach([$team1->id, $team2->id]);
+    $course = TrainingCourse::factory()->create(['cost' => '500']);
+
+    Livewire::actingAs($user)
+        ->test(TrainingBrowser::class)
+        ->call('enroll', $course->id);
+
+    Mail::assertQueued(TrainingApprovalRequested::class, 2);
 });

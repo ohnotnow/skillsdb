@@ -18,6 +18,8 @@ class TrainingCourseUser extends Pivot
         return [
             'status' => EnrollmentStatus::class,
             'rating' => TrainingRating::class,
+            'requested_at' => 'datetime',
+            'approved_at' => 'datetime',
         ];
     }
 
@@ -26,6 +28,11 @@ class TrainingCourseUser extends Pivot
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function trainingCourse(): BelongsTo

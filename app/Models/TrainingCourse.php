@@ -56,7 +56,7 @@ class TrainingCourse extends Model
     {
         return $this->belongsToMany(User::class, 'training_course_user')
             ->using(TrainingCourseUser::class)
-            ->withPivot(['status', 'rating'])
+            ->withPivot(['status', 'rating', 'requested_at', 'approved_by', 'approved_at', 'rejection_reason'])
             ->withTimestamps();
     }
 

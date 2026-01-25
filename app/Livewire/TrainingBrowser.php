@@ -4,9 +4,11 @@ namespace App\Livewire;
 
 use App\Enums\EnrollmentStatus;
 use App\Enums\TrainingRating;
+use App\Mail\TrainingApprovalRequested;
 use App\Models\TrainingCourse;
 use Flux;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -55,14 +57,34 @@ class TrainingBrowser extends Component
             return;
         }
 
+        if ($course->isFree()) {
+            $user->trainingCourses()->attach($courseId, [
+                'status' => EnrollmentStatus::Booked,
+            ]);
+
+            Flux::toast(
+                variant: 'success',
+                heading: 'Enrolled!',
+                text: "You've booked a place on {$course->name}.",
+            );
+
+            return;
+        }
+
+        // Paid course - requires manager approval
         $user->trainingCourses()->attach($courseId, [
-            'status' => EnrollmentStatus::Booked,
+            'status' => EnrollmentStatus::PendingApproval,
+            'requested_at' => now(),
         ]);
 
+        foreach ($user->getManagers() as $manager) {
+            Mail::to($manager)->send(new TrainingApprovalRequested($user, $course));
+        }
+
         Flux::toast(
-            variant: 'success',
-            heading: 'Enrolled!',
-            text: "You've booked a place on {$course->name}.",
+            variant: 'info',
+            heading: 'Request submitted',
+            text: "Your request to enroll on {$course->name} has been sent to your manager for approval.",
         );
     }
 

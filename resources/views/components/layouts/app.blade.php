@@ -26,6 +26,7 @@
                     <flux:sidebar.item icon="home" href="/" wire:navigate>My Skills</flux:sidebar.item>
                     @if (auth()->user()->isTeamManager())
                         <flux:sidebar.item icon="user-group" href="/admin/team-coach" wire:navigate>Team Coach</flux:sidebar.item>
+                        <flux:sidebar.item icon="clipboard-document-check" href="{{ route('manager.training-requests') }}" wire:navigate>Training Requests</flux:sidebar.item>
                     @endif
                     @if (auth()->user()->isAdmin())
                         <flux:separator class="my-2" />
