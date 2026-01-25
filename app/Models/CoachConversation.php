@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CoachMode;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -41,5 +42,17 @@ class CoachConversation extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(CoachMessage::class)->oldest();
+    }
+
+    // Scopes
+
+    public function scopePersonal(Builder $query): Builder
+    {
+        return $query->where('mode', CoachMode::Personal);
+    }
+
+    public function scopeForTeam(Builder $query, int $teamId): Builder
+    {
+        return $query->where('mode', CoachMode::Team)->where('team_id', $teamId);
     }
 }

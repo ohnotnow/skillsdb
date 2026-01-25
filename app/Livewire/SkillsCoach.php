@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Enums\CoachMode;
 use App\Models\CoachConversation;
 use App\Services\SkillsCoach\CoachService;
 use Livewire\Attributes\Layout;
@@ -58,10 +59,12 @@ class SkillsCoach extends Component
         $this->dispatch('message-received');
     }
 
-    public function clearChat(CoachService $coach): void
+    public function clearChat(): void
     {
         $user = auth()->user();
-        $conversation = $coach->startNewConversation($user);
+        $conversation = $user->coachConversations()->create([
+            'mode' => CoachMode::Personal,
+        ]);
         $this->conversationId = $conversation->id;
         $this->reset('messages');
     }
@@ -69,7 +72,7 @@ class SkillsCoach extends Component
     protected function loadConversation(): void
     {
         $user = auth()->user();
-        $conversation = $user->coachConversations()->first();
+        $conversation = $user->coachConversations()->personal()->first();
 
         if ($conversation) {
             $this->conversationId = $conversation->id;

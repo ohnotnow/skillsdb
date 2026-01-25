@@ -102,8 +102,7 @@ class TeamCoach extends Component
         $user = auth()->user();
 
         $conversation = $user->coachConversations()
-            ->where('mode', CoachMode::Team)
-            ->where('team_id', $this->teamId)
+            ->forTeam($this->teamId)
             ->first();
 
         if ($conversation) {
@@ -122,8 +121,7 @@ class TeamCoach extends Component
     protected function getOrCreateTeamConversation($user, Team $team): CoachConversation
     {
         return $user->coachConversations()
-            ->where('mode', CoachMode::Team)
-            ->where('team_id', $team->id)
+            ->forTeam($team->id)
             ->firstOrCreate([
                 'mode' => CoachMode::Team,
                 'team_id' => $team->id,
