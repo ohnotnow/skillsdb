@@ -3,24 +3,35 @@
 namespace App\Livewire\Manager;
 
 use App\Enums\EnrollmentStatus;
+use App\Mail\TeamMemberEnrolled;
 use App\Mail\TrainingRequestApproved;
 use App\Mail\TrainingRequestRejected;
+use App\Models\TrainingCourse;
 use App\Models\TrainingCourseUser;
+use App\Models\User;
 use Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
 class PendingTrainingRequests extends Component
 {
+    #[Url]
+    public $tab = 'approvals';
+
     public ?string $rejectionReason = null;
+
+    public ?User $enrollingUser = null;
+
+    public array $coursesToEnroll = [];
 
     public function mount(): void
     {
-        if (! Auth::user()->isTeamManager()) {
+        if (! Auth::user()->isTeamManager() && ! Auth::user()->isAdmin()) {
             abort(403);
         }
     }
@@ -40,9 +51,48 @@ class PendingTrainingRequests extends Component
             ->get();
     }
 
+    #[Computed]
+    public function teamMembers()
+    {
+        $user = Auth::user();
+
+        if ($user->isAdmin()) {
+            return User::query()
+                ->where('is_staff', true)
+                ->orderBy('surname')
+                ->orderBy('forenames')
+                ->get();
+        }
+
+        return User::query()
+            ->whereHas('teams', function ($q) use ($user) {
+                $q->where('manager_id', $user->id);
+            })
+            ->orderBy('surname')
+            ->orderBy('forenames')
+            ->get();
+    }
+
+    #[Computed]
+    public function availableCoursesForEnrolling()
+    {
+        if (! $this->enrollingUser) {
+            return collect();
+        }
+
+        $alreadyEnrolledIds = $this->enrollingUser->trainingCourses()->pluck('training_course_id');
+
+        return TrainingCourse::active()
+            ->whereNotIn('id', $alreadyEnrolledIds)
+            ->orderBy('name')
+            ->get();
+    }
+
     public function approve(int $enrollmentId): void
     {
-        $enrollment = $this->getAuthorisedEnrollment($enrollmentId);
+        $enrollment = TrainingCourseUser::with(['user', 'trainingCourse'])
+            ->where('status', EnrollmentStatus::PendingApproval)
+            ->findOrFail($enrollmentId);
 
         $enrollment->update([
             'status' => EnrollmentStatus::Booked,
@@ -63,7 +113,9 @@ class PendingTrainingRequests extends Component
 
     public function reject(int $enrollmentId, ?string $reason = null): void
     {
-        $enrollment = $this->getAuthorisedEnrollment($enrollmentId);
+        $enrollment = TrainingCourseUser::with(['user', 'trainingCourse'])
+            ->where('status', EnrollmentStatus::PendingApproval)
+            ->findOrFail($enrollmentId);
 
         $enrollment->update([
             'status' => EnrollmentStatus::Rejected,
@@ -85,20 +137,45 @@ class PendingTrainingRequests extends Component
         $this->rejectionReason = null;
     }
 
-    private function getAuthorisedEnrollment(int $enrollmentId): TrainingCourseUser
+    public function openEnrollModal(int $userId): void
     {
-        $enrollment = TrainingCourseUser::with(['user.teams', 'trainingCourse'])
-            ->where('status', EnrollmentStatus::PendingApproval)
-            ->findOrFail($enrollmentId);
+        $this->enrollingUser = $this->teamMembers->firstWhere('id', $userId);
+        $this->coursesToEnroll = [];
+    }
 
-        $managedTeamIds = Auth::user()->managedTeams()->pluck('id');
-        $userTeamIds = $enrollment->user->teams->pluck('id');
+    public function closeEnrollModal(): void
+    {
+        $this->enrollingUser = null;
+        $this->coursesToEnroll = [];
+    }
 
-        if ($managedTeamIds->intersect($userTeamIds)->isEmpty()) {
-            abort(403);
+    public function enrollTeamMember(): void
+    {
+        $courses = TrainingCourse::active()
+            ->whereIn('id', $this->coursesToEnroll)
+            ->get();
+
+        foreach ($courses as $course) {
+            $this->enrollingUser->trainingCourses()->attach($course->id, [
+                'status' => EnrollmentStatus::Booked,
+                'approved_by' => Auth::id(),
+                'approved_at' => now(),
+            ]);
         }
 
-        return $enrollment;
+        Mail::to($this->enrollingUser)->send(
+            new TeamMemberEnrolled($courses, Auth::user())
+        );
+
+        $name = $this->enrollingUser->full_name;
+
+        $this->closeEnrollModal();
+
+        Flux::toast(
+            variant: 'success',
+            heading: 'Enrolled',
+            text: "{$name} has been enrolled.",
+        );
     }
 
     public function render()
