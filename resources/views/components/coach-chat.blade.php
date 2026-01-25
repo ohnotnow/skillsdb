@@ -173,6 +173,7 @@
             <flux:text class="mt-1 mb-4">Select a previous conversation to continue.</flux:text>
 
             <livewire:conversation-history
+                wire:key="history-{{ $conversationId }}-{{ count($messages) > 0 ? 'active' : 'empty' }}"
                 :mode="$mode"
                 :team-id="$teamId"
                 :current-conversation-id="$conversationId"

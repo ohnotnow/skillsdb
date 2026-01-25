@@ -136,3 +136,75 @@ it('shows empty state when search has no results', function () {
         ->set('search', 'nonexistent query')
         ->assertSee('No conversations match your search');
 });
+
+it('can delete a conversation', function () {
+    $user = User::factory()->create();
+    $conversation = CoachConversation::factory()->create(['user_id' => $user->id]);
+    CoachMessage::factory()->create([
+        'coach_conversation_id' => $conversation->id,
+        'role' => CoachMessageRole::User,
+        'content' => 'Test message',
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(ConversationHistory::class, ['mode' => CoachMode::Personal])
+        ->assertSee('Test message')
+        ->call('deleteConversation', $conversation->id)
+        ->assertDontSee('Test message');
+
+    expect(CoachConversation::find($conversation->id))->toBeNull();
+    expect(CoachMessage::where('coach_conversation_id', $conversation->id)->count())->toBe(0);
+});
+
+it('emits event when deleting the active conversation', function () {
+    $user = User::factory()->create();
+    $conversation = CoachConversation::factory()->create(['user_id' => $user->id]);
+
+    Livewire::actingAs($user)
+        ->test(ConversationHistory::class, [
+            'mode' => CoachMode::Personal,
+            'currentConversationId' => $conversation->id,
+        ])
+        ->call('deleteConversation', $conversation->id)
+        ->assertDispatched('conversation-deleted-active');
+});
+
+it('does not emit event when deleting a non-active conversation', function () {
+    $user = User::factory()->create();
+    $activeConversation = CoachConversation::factory()->create(['user_id' => $user->id]);
+    $otherConversation = CoachConversation::factory()->create(['user_id' => $user->id]);
+
+    Livewire::actingAs($user)
+        ->test(ConversationHistory::class, [
+            'mode' => CoachMode::Personal,
+            'currentConversationId' => $activeConversation->id,
+        ])
+        ->call('deleteConversation', $otherConversation->id)
+        ->assertNotDispatched('conversation-deleted-active');
+});
+
+it('can delete all conversations', function () {
+    $user = User::factory()->create();
+    CoachConversation::factory()->count(3)->create(['user_id' => $user->id]);
+
+    expect(CoachConversation::where('user_id', $user->id)->count())->toBe(3);
+
+    Livewire::actingAs($user)
+        ->test(ConversationHistory::class, ['mode' => CoachMode::Personal])
+        ->call('deleteAllConversations');
+
+    expect(CoachConversation::where('user_id', $user->id)->count())->toBe(0);
+});
+
+it('cannot delete another users conversation', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $otherConversation = CoachConversation::factory()->create(['user_id' => $otherUser->id]);
+
+    Livewire::actingAs($user)
+        ->test(ConversationHistory::class, ['mode' => CoachMode::Personal])
+        ->call('deleteConversation', $otherConversation->id);
+
+    // Conversation should still exist - silently ignored since it's not in the user's list
+    expect(CoachConversation::find($otherConversation->id))->not->toBeNull();
+});

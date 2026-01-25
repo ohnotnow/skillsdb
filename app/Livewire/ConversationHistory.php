@@ -50,6 +50,35 @@ class ConversationHistory extends Component
         Flux::modal('conversation-history')->close();
     }
 
+    public function deleteConversation(int $conversationId): void
+    {
+        if (! $this->conversations->contains('id', $conversationId)) {
+            return;
+        }
+
+        auth()->user()->coachConversations()->where('id', $conversationId)->delete();
+
+        unset($this->conversations);
+
+        if ($this->currentConversationId === $conversationId) {
+            $this->dispatch('conversation-deleted-active');
+        }
+    }
+
+    public function deleteAllConversations(): void
+    {
+        $ids = $this->conversations->pluck('id');
+        $hadActive = $ids->contains($this->currentConversationId);
+
+        auth()->user()->coachConversations()->whereIn('id', $ids)->delete();
+
+        unset($this->conversations);
+
+        if ($hadActive) {
+            $this->dispatch('conversation-deleted-active');
+        }
+    }
+
     public function render()
     {
         return view('livewire.conversation-history');

@@ -105,6 +105,13 @@ class TeamCoach extends Component
         $this->loadConversation();
     }
 
+    #[On('conversation-deleted-active')]
+    public function handleActiveConversationDeleted(): void
+    {
+        $this->conversationId = null;
+        $this->reset('messages');
+    }
+
     protected function loadConversation(): void
     {
         $user = auth()->user();

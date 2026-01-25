@@ -120,7 +120,7 @@ it('can clear chat and start new conversation', function () {
     $originalConversationId = $component->get('conversationId');
 
     $component->call('clearChat')
-        ->assertDontSee('Test message')
+        ->assertSet('messages', [])
         ->assertSee('your Skills Coach');
 
     // Should have created a new conversation
@@ -155,14 +155,19 @@ it('can switch to a different conversation', function () {
     ]);
 
     // Start with conversation1 loaded, then switch to conversation2
-    Livewire::actingAs($user)
+    $component = Livewire::actingAs($user)
         ->test(SkillsCoach::class)
-        ->set('conversationId', $conversation1->id)
         ->call('switchConversation', $conversation1->id)
-        ->assertSee('First conversation message')
-        ->assertDontSee('Second conversation message')
-        ->call('switchConversation', $conversation2->id)
-        ->assertSee('Second conversation message')
-        ->assertDontSee('First conversation message')
+        ->assertSet('conversationId', $conversation1->id);
+
+    // Verify messages array contains only conversation1's messages
+    expect($component->get('messages'))->toHaveCount(1);
+    expect($component->get('messages')[0]['content'])->toBe('First conversation message');
+
+    $component->call('switchConversation', $conversation2->id)
         ->assertSet('conversationId', $conversation2->id);
+
+    // Verify messages array now contains only conversation2's messages
+    expect($component->get('messages'))->toHaveCount(1);
+    expect($component->get('messages')[0]['content'])->toBe('Second conversation message');
 });
