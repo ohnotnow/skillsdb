@@ -16,16 +16,20 @@
         <div
             id="skills-visualization"
             class="absolute inset-0 overflow-hidden"
+            data-hierarchy="{{ json_encode($this->hierarchyData) }}"
             wire:ignore
         >
-            {{-- D3 will render here --}}
+            {{-- D3 will render here - placeholder shown until JS loads --}}
             <div class="flex items-center justify-center h-full text-zinc-400">
                 <div class="text-center">
                     <flux:icon name="chart-bar" class="w-16 h-16 mx-auto mb-4" />
                     <flux:text>Visualization loading...</flux:text>
-                    <flux:text class="text-sm mt-2">D3.js will render the skills hierarchy here.</flux:text>
                 </div>
             </div>
         </div>
     </flux:card>
 </div>
+
+@push('scripts')
+    @vite('resources/js/skills-visualization.js')
+@endpush
