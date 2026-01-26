@@ -30,6 +30,7 @@
                         <flux:table.column>Name</flux:table.column>
                         <flux:table.column class="hidden md:table-cell">Description</flux:table.column>
                         <flux:table.column class="hidden sm:table-cell">Category</flux:table.column>
+                        <flux:table.column class="hidden sm:table-cell">Reportable</flux:table.column>
                         <flux:table.column>Users</flux:table.column>
                         <flux:table.column></flux:table.column>
                     </flux:table.columns>
@@ -44,6 +45,13 @@
                                 </flux:table.cell>
                                 <flux:table.cell class="hidden md:table-cell max-w-xs truncate">{{ $skill->description }}</flux:table.cell>
                                 <flux:table.cell class="hidden sm:table-cell">{{ $skill->category?->name ?? '-' }}</flux:table.cell>
+                                <flux:table.cell class="hidden sm:table-cell">
+                                    @if ($skill->is_reportable)
+                                        <flux:badge size="sm" color="lime">Yes</flux:badge>
+                                    @else
+                                        <span class="text-zinc-400">-</span>
+                                    @endif
+                                </flux:table.cell>
                                 <flux:table.cell data-test="skill-{{ $skill->id }}-users-count">@if ($skill->isPending()){{ $skill->users->first()?->short_name ?? '-' }}@else{{ $skill->users_count }}@endif</flux:table.cell>
                                 <flux:table.cell>
                                     <flux:dropdown>
@@ -185,6 +193,10 @@
                             </flux:select.option.create>
                         </flux:select>
                         <flux:error name="skillCategoryId" />
+                    </flux:field>
+
+                    <flux:field>
+                        <flux:switch wire:model="skillIsReportable" label="Reportable" description="Include this skill in management reports and dashboards" />
                     </flux:field>
                 </div>
 

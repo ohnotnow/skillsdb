@@ -77,6 +77,21 @@ class TestDataSeeder extends Seeder
 
     private function createSkills(User $adminUser, array $categories): array
     {
+        // Skills that management care about for reporting/dashboards
+        $reportableSkills = [
+            'Active Directory',
+            'AWS',
+            'Azure',
+            'Linux Administration',
+            'Windows Server',
+            'Docker',
+            'Kubernetes',
+            'Power BI',
+            'SQL',
+            'Python',
+            'HPC',
+        ];
+
         $skillsData = [
             // Programming Languages
             'programming' => [
@@ -186,6 +201,7 @@ class TestDataSeeder extends Seeder
                     'name' => $skillData['name'],
                     'description' => $skillData['description'],
                     'skill_category_id' => $categories[$categoryKey]->id,
+                    'is_reportable' => in_array($skillData['name'], $reportableSkills),
                 ]);
             }
         }

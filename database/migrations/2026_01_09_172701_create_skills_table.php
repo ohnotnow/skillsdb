@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('skill_category_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('approved_at')->nullable();
+            $table->boolean('is_reportable')->default(false);
             $table->timestamps();
         });
     }

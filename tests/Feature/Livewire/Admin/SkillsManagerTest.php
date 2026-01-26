@@ -553,3 +553,30 @@ it('does not change approval details when approving an already approved skill', 
     expect($skill->approved_by)->toBe($originalAdmin->id);
     expect($skill->approved_at->toDateTimeString())->toBe($originalApprovedAt->toDateTimeString());
 });
+
+it('can create and edit skills with the reportable flag', function () {
+    $admin = User::factory()->admin()->create();
+
+    // Create a reportable skill
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openCreateModal')
+        ->set('skillName', 'Active Directory')
+        ->set('skillIsReportable', true)
+        ->call('saveSkill')
+        ->assertHasNoErrors();
+
+    $skill = Skill::where('name', 'Active Directory')->first();
+    expect($skill->is_reportable)->toBeTrue();
+
+    // Edit to remove reportable flag
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openEditModal', $skill->id)
+        ->assertSet('skillIsReportable', true)
+        ->set('skillIsReportable', false)
+        ->call('saveSkill')
+        ->assertHasNoErrors();
+
+    expect($skill->fresh()->is_reportable)->toBeFalse();
+});

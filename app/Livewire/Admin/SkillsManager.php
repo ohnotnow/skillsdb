@@ -33,6 +33,8 @@ class SkillsManager extends Component
 
     public $skillCategoryId = '';
 
+    public bool $skillIsReportable = false;
+
     public string $categorySearchTerm = '';
 
     // Skill Delete confirmation
@@ -103,7 +105,7 @@ class SkillsManager extends Component
 
     public function openCreateModal(): void
     {
-        $this->reset(['editingSkillId', 'skillName', 'skillDescription', 'skillCategoryId', 'categorySearchTerm']);
+        $this->reset(['editingSkillId', 'skillName', 'skillDescription', 'skillCategoryId', 'skillIsReportable', 'categorySearchTerm']);
         $this->showSkillModal = true;
     }
 
@@ -114,6 +116,7 @@ class SkillsManager extends Component
         $this->skillName = $skill->name;
         $this->skillDescription = $skill->description ?? '';
         $this->skillCategoryId = $skill->skill_category_id ?? '';
+        $this->skillIsReportable = $skill->is_reportable;
         $this->categorySearchTerm = '';
         $this->showSkillModal = true;
     }
@@ -143,6 +146,7 @@ class SkillsManager extends Component
             'name' => $this->skillName,
             'description' => $this->skillDescription ?: null,
             'skill_category_id' => $this->skillCategoryId ?: null,
+            'is_reportable' => $this->skillIsReportable,
         ];
 
         if ($this->editingSkillId) {

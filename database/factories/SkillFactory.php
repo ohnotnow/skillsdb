@@ -41,4 +41,11 @@ class SkillFactory extends Factory
             'approved_at' => null,
         ]);
     }
+
+    public function reportable(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_reportable' => true,
+        ]);
+    }
 }

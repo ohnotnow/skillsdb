@@ -18,12 +18,14 @@ class Skill extends Model
         'skill_category_id',
         'approved_by',
         'approved_at',
+        'is_reportable',
     ];
 
     protected function casts(): array
     {
         return [
             'approved_at' => 'datetime',
+            'is_reportable' => 'boolean',
         ];
     }
 
