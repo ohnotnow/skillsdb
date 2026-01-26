@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Skill;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -46,6 +47,13 @@ class SkillFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'is_reportable' => true,
+        ]);
+    }
+
+    public function childOf(Skill $parent): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'parent_id' => $parent->id,
         ]);
     }
 }

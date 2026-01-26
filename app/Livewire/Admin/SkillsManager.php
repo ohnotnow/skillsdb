@@ -35,7 +35,11 @@ class SkillsManager extends Component
 
     public bool $skillIsReportable = false;
 
+    public $skillParentId = '';
+
     public string $categorySearchTerm = '';
+
+    public string $parentSkillSearchTerm = '';
 
     // Skill Delete confirmation
     public ?int $deletingSkillId = null;
@@ -58,13 +62,14 @@ class SkillsManager extends Component
     public function skills()
     {
         return Skill::query()
-            ->with(['category', 'users'])
+            ->with(['category', 'parent', 'users'])
             ->withCount('users')
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
                     $q->where('name', 'like', "%{$this->search}%")
                         ->orWhere('description', 'like', "%{$this->search}%")
-                        ->orWhereHas('category', fn ($q) => $q->where('name', 'like', "%{$this->search}%"));
+                        ->orWhereHas('category', fn ($q) => $q->where('name', 'like', "%{$this->search}%"))
+                        ->orWhereHas('parent', fn ($q) => $q->where('name', 'like', "%{$this->search}%"));
                 });
             })
             ->orderByRaw('approved_at IS NOT NULL, approved_at DESC')
@@ -103,9 +108,26 @@ class SkillsManager extends Component
         ];
     }
 
+    #[Computed]
+    public function filteredParentSkillOptions()
+    {
+        if (! $this->showSkillModal) {
+            return collect();
+        }
+
+        $search = trim($this->parentSkillSearchTerm);
+
+        return Skill::query()
+            ->approved()
+            ->when($this->editingSkillId, fn ($q) => $q->where('id', '!=', $this->editingSkillId))
+            ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
+            ->orderBy('name')
+            ->get();
+    }
+
     public function openCreateModal(): void
     {
-        $this->reset(['editingSkillId', 'skillName', 'skillDescription', 'skillCategoryId', 'skillIsReportable', 'categorySearchTerm']);
+        $this->reset(['editingSkillId', 'skillName', 'skillDescription', 'skillCategoryId', 'skillParentId', 'skillIsReportable', 'categorySearchTerm', 'parentSkillSearchTerm']);
         $this->showSkillModal = true;
     }
 
@@ -116,8 +138,10 @@ class SkillsManager extends Component
         $this->skillName = $skill->name;
         $this->skillDescription = $skill->description ?? '';
         $this->skillCategoryId = $skill->skill_category_id ?? '';
+        $this->skillParentId = $skill->parent_id ?? '';
         $this->skillIsReportable = $skill->is_reportable;
         $this->categorySearchTerm = '';
+        $this->parentSkillSearchTerm = '';
         $this->showSkillModal = true;
     }
 
@@ -136,16 +160,23 @@ class SkillsManager extends Component
 
     public function saveSkill(): void
     {
+        $parentIdRules = ['nullable', 'exists:skills,id'];
+        if ($this->editingSkillId && $this->skillParentId) {
+            $parentIdRules[] = Rule::notIn([$this->editingSkillId]);
+        }
+
         $this->validate([
             'skillName' => ['required', 'string', 'max:255', 'unique:skills,name'.($this->editingSkillId ? ','.$this->editingSkillId : '')],
             'skillDescription' => ['nullable', 'string', 'max:1000'],
             'skillCategoryId' => ['nullable', 'exists:skill_categories,id'],
+            'skillParentId' => $parentIdRules,
         ]);
 
         $data = [
             'name' => $this->skillName,
             'description' => $this->skillDescription ?: null,
             'skill_category_id' => $this->skillCategoryId ?: null,
+            'parent_id' => $this->skillParentId ?: null,
             'is_reportable' => $this->skillIsReportable,
         ];
 

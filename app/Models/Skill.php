@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Skill extends Model
 {
@@ -16,6 +17,7 @@ class Skill extends Model
         'name',
         'description',
         'skill_category_id',
+        'parent_id',
         'approved_by',
         'approved_at',
         'is_reportable',
@@ -34,6 +36,16 @@ class Skill extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(SkillCategory::class, 'skill_category_id');
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Skill::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(Skill::class, 'parent_id');
     }
 
     public function approvedBy(): BelongsTo

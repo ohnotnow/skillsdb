@@ -580,3 +580,114 @@ it('can create and edit skills with the reportable flag', function () {
 
     expect($skill->fresh()->is_reportable)->toBeFalse();
 });
+
+it('can create a skill with a parent skill', function () {
+    $admin = User::factory()->admin()->create();
+    $parentSkill = Skill::factory()->approved()->create(['name' => 'Containerisation']);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openCreateModal')
+        ->set('skillName', 'Docker')
+        ->set('skillParentId', $parentSkill->id)
+        ->call('saveSkill')
+        ->assertHasNoErrors();
+
+    $skill = Skill::where('name', 'Docker')->first();
+    expect($skill)->not->toBeNull();
+    expect($skill->parent_id)->toBe($parentSkill->id);
+    expect($skill->parent->name)->toBe('Containerisation');
+});
+
+it('can edit a skill to add a parent', function () {
+    $admin = User::factory()->admin()->create();
+    $parentSkill = Skill::factory()->approved()->create(['name' => 'Containerisation']);
+    $childSkill = Skill::factory()->approved()->create(['name' => 'Docker']);
+
+    expect($childSkill->parent_id)->toBeNull();
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openEditModal', $childSkill->id)
+        ->assertSet('skillParentId', '')
+        ->set('skillParentId', $parentSkill->id)
+        ->call('saveSkill')
+        ->assertHasNoErrors();
+
+    expect($childSkill->fresh()->parent_id)->toBe($parentSkill->id);
+});
+
+it('can edit a skill to remove its parent', function () {
+    $admin = User::factory()->admin()->create();
+    $parentSkill = Skill::factory()->approved()->create(['name' => 'Containerisation']);
+    $childSkill = Skill::factory()->approved()->childOf($parentSkill)->create(['name' => 'Docker']);
+
+    expect($childSkill->parent_id)->toBe($parentSkill->id);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openEditModal', $childSkill->id)
+        ->assertSet('skillParentId', $parentSkill->id)
+        ->set('skillParentId', '')
+        ->call('saveSkill')
+        ->assertHasNoErrors();
+
+    expect($childSkill->fresh()->parent_id)->toBeNull();
+});
+
+it('prevents setting a skill as its own parent', function () {
+    $admin = User::factory()->admin()->create();
+    $skill = Skill::factory()->approved()->create(['name' => 'Docker']);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('openEditModal', $skill->id)
+        ->set('skillParentId', $skill->id)
+        ->call('saveSkill')
+        ->assertHasErrors(['skillParentId']);
+
+    expect($skill->fresh()->parent_id)->toBeNull();
+});
+
+it('orphans children when parent skill is deleted', function () {
+    $admin = User::factory()->admin()->create();
+    $parentSkill = Skill::factory()->approved()->create(['name' => 'Containerisation']);
+    $childSkill1 = Skill::factory()->approved()->childOf($parentSkill)->create(['name' => 'Docker']);
+    $childSkill2 = Skill::factory()->approved()->childOf($parentSkill)->create(['name' => 'Kubernetes']);
+
+    expect($childSkill1->parent_id)->toBe($parentSkill->id);
+    expect($childSkill2->parent_id)->toBe($parentSkill->id);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->call('confirmDelete', $parentSkill->id)
+        ->call('deleteSkill');
+
+    expect(Skill::find($parentSkill->id))->toBeNull();
+    expect($childSkill1->fresh()->parent_id)->toBeNull();
+    expect($childSkill2->fresh()->parent_id)->toBeNull();
+});
+
+it('displays parent skill name in the skills table', function () {
+    $admin = User::factory()->admin()->create();
+    $parentSkill = Skill::factory()->approved()->create(['name' => 'Containerisation']);
+    Skill::factory()->approved()->childOf($parentSkill)->create(['name' => 'Docker']);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->assertSee('Docker')
+        ->assertSee('Containerisation');
+});
+
+it('can search skills by parent name', function () {
+    $admin = User::factory()->admin()->create();
+    $parentSkill = Skill::factory()->approved()->create(['name' => 'Containerisation']);
+    Skill::factory()->approved()->childOf($parentSkill)->create(['name' => 'Docker']);
+    Skill::factory()->approved()->create(['name' => 'PHP']);
+
+    Livewire::actingAs($admin)
+        ->test(SkillsManager::class)
+        ->set('search', 'Containerisation')
+        ->assertSee('Docker')
+        ->assertDontSee('PHP');
+});

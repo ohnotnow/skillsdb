@@ -30,6 +30,7 @@
                         <flux:table.column>Name</flux:table.column>
                         <flux:table.column class="hidden md:table-cell">Description</flux:table.column>
                         <flux:table.column class="hidden sm:table-cell">Category</flux:table.column>
+                        <flux:table.column class="hidden lg:table-cell">Parent</flux:table.column>
                         <flux:table.column class="hidden sm:table-cell">Reportable</flux:table.column>
                         <flux:table.column>Users</flux:table.column>
                         <flux:table.column></flux:table.column>
@@ -45,6 +46,7 @@
                                 </flux:table.cell>
                                 <flux:table.cell class="hidden md:table-cell max-w-xs truncate">{{ $skill->description }}</flux:table.cell>
                                 <flux:table.cell class="hidden sm:table-cell">{{ $skill->category?->name ?? '-' }}</flux:table.cell>
+                                <flux:table.cell class="hidden lg:table-cell">{{ $skill->parent?->name ?? '-' }}</flux:table.cell>
                                 <flux:table.cell class="hidden sm:table-cell">
                                     @if ($skill->is_reportable)
                                         <flux:badge size="sm" color="lime">Yes</flux:badge>
@@ -193,6 +195,21 @@
                             </flux:select.option.create>
                         </flux:select>
                         <flux:error name="skillCategoryId" />
+                    </flux:field>
+
+                    <flux:field>
+                        <flux:label>Parent Skill</flux:label>
+                        <flux:select wire:model="skillParentId" variant="combobox" placeholder="Select parent skill..." :filter="false" clearable>
+                            <x-slot name="input">
+                                <flux:select.input wire:model.live="parentSkillSearchTerm" placeholder="Search skills..." />
+                            </x-slot>
+
+                            @foreach ($this->filteredParentSkillOptions as $parentSkill)
+                                <flux:select.option value="{{ $parentSkill->id }}" wire:key="parent-{{ $parentSkill->id }}">{{ $parentSkill->name }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        <flux:description>Optionally nest this skill under a parent skill</flux:description>
+                        <flux:error name="skillParentId" />
                     </flux:field>
 
                     <flux:field>

@@ -218,6 +218,15 @@ class TestDataSeeder extends Seeder
             'skill_category_id' => $categories['programming']->id,
         ]);
 
+        // Example of skill nesting - create a parent skill and reparent Docker/Kubernetes
+        $containerisation = Skill::factory()->approved($adminUser)->create([
+            'name' => 'Containerisation',
+            'description' => 'Container technologies for application packaging and deployment',
+            'skill_category_id' => $categories['devops']->id,
+        ]);
+        $skills['docker']->update(['parent_id' => $containerisation->id]);
+        $skills['kubernetes']->update(['parent_id' => $containerisation->id]);
+
         return $skills;
     }
 
