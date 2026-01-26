@@ -4,6 +4,7 @@ use App\Livewire\Admin\ApiTokensManager;
 use App\Livewire\Admin\SkillsDashboard;
 use App\Livewire\Admin\SkillsManager;
 use App\Livewire\Admin\SkillsMatrix;
+use App\Livewire\Admin\SkillsVisualization;
 use App\Livewire\Admin\TeamCoach;
 use App\Livewire\Admin\TrainingCoursesManager;
 use App\Livewire\Admin\UserSkillsEditor;
@@ -24,6 +25,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/skills', SkillsManager::class)->name('skills');
+        Route::get('/skills/visualization', SkillsVisualization::class)->name('skills.visualization');
         Route::get('/users', UserSkillsManager::class)->name('users');
         Route::get('/users/{user}', UserSkillsEditor::class)->name('users.skills');
         Route::get('/matrix', SkillsMatrix::class)->name('matrix');
