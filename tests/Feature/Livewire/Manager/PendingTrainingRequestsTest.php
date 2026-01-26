@@ -2,6 +2,7 @@
 
 use App\Enums\EnrollmentStatus;
 use App\Livewire\Manager\PendingTrainingRequests;
+use App\Mail\TeamMemberEnrolled;
 use App\Mail\TrainingRequestApproved;
 use App\Mail\TrainingRequestRejected;
 use App\Models\Team;
@@ -155,31 +156,6 @@ it('sends rejection email to user when rejected', function () {
     });
 });
 
-it('cannot approve requests from users not in managed teams', function () {
-    Mail::fake();
-    $manager = User::factory()->create();
-    Team::factory()->create(['manager_id' => $manager->id]);
-    $otherManager = User::factory()->create();
-    $otherTeam = Team::factory()->create(['manager_id' => $otherManager->id]);
-    $otherTeamMember = User::factory()->create();
-    $otherTeamMember->teams()->attach($otherTeam);
-    $course = TrainingCourse::factory()->create(['cost' => '500']);
-    $otherTeamMember->trainingCourses()->attach($course->id, [
-        'status' => EnrollmentStatus::PendingApproval,
-        'requested_at' => now(),
-    ]);
-    $enrollment = TrainingCourseUser::where('user_id', $otherTeamMember->id)->first();
-
-    Livewire::actingAs($manager)
-        ->test(PendingTrainingRequests::class)
-        ->call('approve', $enrollment->id)
-        ->assertForbidden();
-
-    $enrollment->refresh();
-    expect($enrollment->status)->toBe(EnrollmentStatus::PendingApproval);
-    Mail::assertNothingQueued();
-});
-
 it('shows empty state when no pending requests', function () {
     $manager = User::factory()->create();
     Team::factory()->create(['manager_id' => $manager->id]);
@@ -187,4 +163,80 @@ it('shows empty state when no pending requests', function () {
     Livewire::actingAs($manager)
         ->test(PendingTrainingRequests::class)
         ->assertSee('No pending training requests');
+});
+
+it('shows team members in the enroll tab', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $teamMember = User::factory()->create(['forenames' => 'Alice', 'surname' => 'Smith']);
+    $teamMember->teams()->attach($team);
+
+    Livewire::actingAs($manager)
+        ->test(PendingTrainingRequests::class)
+        ->set('tab', 'enroll')
+        ->assertSee('Alice Smith');
+});
+
+it('admin can see all staff in the enroll tab', function () {
+    $admin = User::factory()->admin()->create();
+    $staffMember = User::factory()->create(['forenames' => 'Bob', 'surname' => 'Jones', 'is_staff' => true]);
+
+    Livewire::actingAs($admin)
+        ->test(PendingTrainingRequests::class)
+        ->set('tab', 'enroll')
+        ->assertSee('Bob Jones');
+});
+
+it('can enroll a team member on courses', function () {
+    Mail::fake();
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $teamMember = User::factory()->create();
+    $teamMember->teams()->attach($team);
+    $course = TrainingCourse::factory()->create(['name' => 'Test Course']);
+
+    Livewire::actingAs($manager)
+        ->test(PendingTrainingRequests::class)
+        ->call('openEnrollModal', $teamMember->id)
+        ->set('coursesToEnroll', [$course->id])
+        ->call('enrollTeamMember');
+
+    expect($teamMember->fresh()->trainingCourses)->toHaveCount(1);
+    expect($teamMember->trainingCourses->first()->pivot->status)->toBe(EnrollmentStatus::Booked);
+    expect($teamMember->trainingCourses->first()->pivot->approved_by)->toBe($manager->id);
+});
+
+it('sends email when team member is enrolled by manager', function () {
+    Mail::fake();
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $teamMember = User::factory()->create();
+    $teamMember->teams()->attach($team);
+    $course = TrainingCourse::factory()->create();
+
+    Livewire::actingAs($manager)
+        ->test(PendingTrainingRequests::class)
+        ->call('openEnrollModal', $teamMember->id)
+        ->set('coursesToEnroll', [$course->id])
+        ->call('enrollTeamMember');
+
+    Mail::assertQueued(TeamMemberEnrolled::class, function ($mail) use ($teamMember) {
+        return $mail->hasTo($teamMember->email);
+    });
+});
+
+it('excludes already enrolled courses from available courses', function () {
+    $manager = User::factory()->create();
+    $team = Team::factory()->create(['manager_id' => $manager->id]);
+    $teamMember = User::factory()->create();
+    $teamMember->teams()->attach($team);
+    $enrolledCourse = TrainingCourse::factory()->create(['name' => 'Already Enrolled']);
+    $availableCourse = TrainingCourse::factory()->create(['name' => 'Available Course']);
+    $teamMember->trainingCourses()->attach($enrolledCourse->id, ['status' => EnrollmentStatus::Booked]);
+
+    Livewire::actingAs($manager)
+        ->test(PendingTrainingRequests::class)
+        ->call('openEnrollModal', $teamMember->id)
+        ->assertSee('Available Course')
+        ->assertDontSee('Already Enrolled');
 });

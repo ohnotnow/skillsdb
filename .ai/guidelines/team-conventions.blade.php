@@ -165,10 +165,19 @@ Note: The local test environment uses an in-memory database via the RefreshDatab
 
 Quite often you will see the developers or stakeholder names in the git commits, path names, specifications, etc.  We do not want to leak PII.  So please do not use those names in your outputs.  Especially not when writing docs or example scripts.  The one exception to that is if you are directly taling to a developer and giving them an example bash/zsh/whatever script to try right then and there.  Asking the developer to run `/Users/jenny/code/test.sh` is fine.  Putting into a readme or progress document 'Then Jimmy Smith asked for yet another feature change - omg!' is not fine.
 
+### Security/authorisation
+
+Our users and threat model: Our users are full-time contracted academics and administrators (sometimes students who have paid a lot of money to study with us). They use these apps reluctantly - they're not exploring dev tools or crafting malicious requests.  If the basics are in place (route middleware, basic guards).  The realistic threat model is "someone makes a typo" not "someone intercepts requests to enroll colleagues on training courses." Write code for the users we actually have, not imaginary hackers.  A professor of Inorganic Chemistry who is being asked to fill in a procurement form is *really quite unlikely* to open the browser developer tools and l33t h4x0r a request to the back end so that the form is submitted under someone else's name.
+
+Authorization sanity check: Before adding authorization logic, describe the attack out loud: "A user would need to [steps] in order to [bad outcome]." If the steps are implausible for our users, or the outcome is trivial, skip the check.  If you feel twitchy about it add a comment and let the user know.
+
+**Picture**:
+Does it seem like a likely thing for a professor of Inorganic Chemistry with millions of pounds of research income, a large research group to manage, PhD students to supervise, half a dozen undergrad courses to teach and some Masters project students to look after to be in some admin app and think "You know what?  I think .... and I know it's naughty!  And it's a total waste of my time! To _enroll someone on a course they are already enrolled on!_ LOLOLOLOL!!!"
+
 
 ### Notes from your past self
 
-• Future-me, read this before you touch the keyboard
+• Future claude, read this before you touch the code
 
   - Start with the most obvious solution that satisfies the spec; don’t add guards, double-up "just in case" validation, or abstractions unless the user explicitly asks.
   - Respect the existing guarantees in the stack (Laravel validation, Blade escaping, etc.)—don’t re-implement or double-check them “just in case.”

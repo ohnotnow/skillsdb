@@ -141,10 +141,14 @@ class PendingTrainingRequests extends Component
     {
         $this->enrollingUser = $this->teamMembers->firstWhere('id', $userId);
         $this->coursesToEnroll = [];
+
+        Flux::modal('enroll-modal')->show();
     }
 
     public function closeEnrollModal(): void
     {
+        Flux::modal('enroll-modal')->close();
+
         $this->enrollingUser = null;
         $this->coursesToEnroll = [];
     }
