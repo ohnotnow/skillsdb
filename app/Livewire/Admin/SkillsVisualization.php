@@ -31,20 +31,26 @@ class SkillsVisualization extends Component
                 continue;
             }
 
+            $skillNodes = $category->skills->map(fn ($skill) => $this->buildSkillNode($skill))->values()->all();
+
             $children[] = [
                 'name' => $category->name,
                 'type' => 'category',
                 'colour' => $category->colour?->value ?? 'zinc',
-                'children' => $category->skills->map(fn ($skill) => $this->buildSkillNode($skill))->values()->all(),
+                'userCount' => $this->sumUserCounts($skillNodes),
+                'children' => $skillNodes,
             ];
         }
 
         if ($rootSkillsWithoutCategory->isNotEmpty()) {
+            $skillNodes = $rootSkillsWithoutCategory->map(fn ($skill) => $this->buildSkillNode($skill))->values()->all();
+
             $children[] = [
                 'name' => 'Uncategorized',
                 'type' => 'category',
                 'colour' => 'zinc',
-                'children' => $rootSkillsWithoutCategory->map(fn ($skill) => $this->buildSkillNode($skill))->values()->all(),
+                'userCount' => $this->sumUserCounts($skillNodes),
+                'children' => $skillNodes,
             ];
         }
 
@@ -76,6 +82,21 @@ class SkillsVisualization extends Component
         }
 
         return $node;
+    }
+
+    private function sumUserCounts(array $nodes): int
+    {
+        $total = 0;
+
+        foreach ($nodes as $node) {
+            $total += $node['userCount'] ?? 0;
+
+            if (! empty($node['children'])) {
+                $total += $this->sumUserCounts($node['children']);
+            }
+        }
+
+        return $total;
     }
 
     public function render()

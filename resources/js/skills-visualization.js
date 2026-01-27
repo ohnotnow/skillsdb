@@ -76,7 +76,9 @@ function showTooltip(tooltip, event, d) {
     } else if (d.data.type === 'category') {
         const skillCount = d.children?.length || 0;
         const skillLabel = skillCount === 1 ? 'skill' : 'skills';
+        const userLabel = d.data.userCount === 1 ? 'user' : 'users';
         html += `<div style="margin-top: 4px;">${skillCount} ${skillLabel}</div>`;
+        html += `<div style="margin-top: 2px; font-weight: 500;">${d.data.userCount} ${userLabel} total</div>`;
     }
 
     tooltip.innerHTML = html;
@@ -159,7 +161,7 @@ function initSkillsVisualization() {
         })
         .on('drag', (event) => {
             const currentAngle = Math.atan2(event.y, event.x) * 180 / Math.PI;
-            const deltaAngle = currentAngle - dragStartAngle;
+            const deltaAngle = dragStartAngle - currentAngle;
             currentRotation = rotationAtDragStart + deltaAngle;
 
             const currentScale = d3.zoomTransform(svg.node()).k;

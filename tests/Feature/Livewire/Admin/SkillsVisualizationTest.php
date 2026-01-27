@@ -158,6 +158,49 @@ it('excludes pending skills from hierarchy', function () {
     expect($allSkillNames)->not->toContain('Pending Skill');
 });
 
+it('includes total user count on categories', function () {
+    $admin = User::factory()->admin()->create();
+    $users = User::factory()->count(3)->create();
+    $category = SkillCategory::factory()->create(['name' => 'Development']);
+    $skill1 = Skill::factory()->approved()->create(['name' => 'PHP', 'skill_category_id' => $category->id]);
+    $skill2 = Skill::factory()->approved()->create(['name' => 'Python', 'skill_category_id' => $category->id]);
+
+    // 3 users have PHP, 2 users have Python = 5 total
+    foreach ($users as $user) {
+        $user->skills()->attach($skill1->id, ['level' => 1]);
+    }
+    $users[0]->skills()->attach($skill2->id, ['level' => 1]);
+    $users[1]->skills()->attach($skill2->id, ['level' => 1]);
+
+    $component = Livewire::actingAs($admin)->test(SkillsVisualization::class);
+
+    $data = $component->instance()->hierarchyData;
+    $categoryNode = collect($data['children'])->firstWhere('name', 'Development');
+
+    expect($categoryNode['userCount'])->toBe(5);
+});
+
+it('includes nested skill user counts in category total', function () {
+    $admin = User::factory()->admin()->create();
+    $users = User::factory()->count(2)->create();
+    $category = SkillCategory::factory()->create(['name' => 'Development']);
+    $parent = Skill::factory()->approved()->create(['name' => 'PHP', 'skill_category_id' => $category->id]);
+    $child = Skill::factory()->approved()->create(['name' => 'Laravel', 'skill_category_id' => $category->id, 'parent_id' => $parent->id]);
+
+    // 2 users have PHP, 1 user has Laravel = 3 total
+    foreach ($users as $user) {
+        $user->skills()->attach($parent->id, ['level' => 1]);
+    }
+    $users[0]->skills()->attach($child->id, ['level' => 1]);
+
+    $component = Livewire::actingAs($admin)->test(SkillsVisualization::class);
+
+    $data = $component->instance()->hierarchyData;
+    $categoryNode = collect($data['children'])->firstWhere('name', 'Development');
+
+    expect($categoryNode['userCount'])->toBe(3);
+});
+
 it('excludes empty categories from hierarchy', function () {
     $admin = User::factory()->admin()->create();
     SkillCategory::factory()->create(['name' => 'Empty Category']);
