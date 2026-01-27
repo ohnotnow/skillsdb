@@ -27,6 +27,10 @@ function getColour(colourName) {
 }
 
 function createTooltip(container) {
+    // Remove existing tooltip if present
+    const existing = container.querySelector('.skills-viz-tooltip');
+    if (existing) existing.remove();
+
     const tooltip = document.createElement('div');
     tooltip.className = 'skills-viz-tooltip';
     tooltip.style.cssText = `
@@ -97,7 +101,10 @@ function hideTooltip(tooltip) {
     tooltip.style.opacity = '0';
 }
 
-function initSkillsVisualization() {
+// Track current layout
+let currentLayout = 'radial';
+
+function initSkillsVisualization(layout = 'radial') {
     const container = document.getElementById('skills-visualization');
     if (!container) return;
 
@@ -112,8 +119,17 @@ function initSkillsVisualization() {
         return;
     }
 
-    // Clear placeholder content
-    container.innerHTML = '';
+    currentLayout = layout;
+
+    // Clear existing content but preserve data attribute
+    const svg = container.querySelector('svg');
+    if (svg) svg.remove();
+    const existingTooltip = container.querySelector('.skills-viz-tooltip');
+    if (existingTooltip) existingTooltip.remove();
+
+    // Remove placeholder if present
+    const placeholder = container.querySelector('.flex.items-center');
+    if (placeholder) placeholder.remove();
 
     // Create tooltip
     const tooltip = createTooltip(container);
@@ -121,8 +137,24 @@ function initSkillsVisualization() {
     // Get container dimensions
     const width = container.clientWidth;
     const height = container.clientHeight;
+
+    // Detect dark mode
+    const isDarkMode = document.documentElement.classList.contains('dark') ||
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    const textColour = isDarkMode ? '#e4e4e7' : '#3f3f46';
+    const strokeColour = isDarkMode ? '#27272a' : '#ffffff';
+
+    if (layout === 'radial') {
+        renderRadialTree(container, data, tooltip, width, height, textColour, strokeColour);
+    } else {
+        renderTidyTree(container, data, tooltip, width, height, textColour, strokeColour);
+    }
+}
+
+function renderRadialTree(container, data, tooltip, width, height, textColour, strokeColour) {
     const outerRadius = Math.min(width, height) / 2 - 100;
-    const innerRadius = 80; // Push categories away from centre
+    const innerRadius = 80;
 
     // Track rotation angle and pan offset
     let currentRotation = 0;
@@ -199,7 +231,7 @@ function initSkillsVisualization() {
     // Create hierarchy
     const root = d3.hierarchy(data);
 
-    // Create tree layout - use the range from inner to outer radius
+    // Create tree layout
     const tree = d3.tree()
         .size([2 * Math.PI, outerRadius - innerRadius])
         .separation((a, b) => (a.parent === b.parent ? 1 : 2) / a.depth);
@@ -233,12 +265,162 @@ function initSkillsVisualization() {
         .join('g')
         .attr('transform', d => `rotate(${d.x * 180 / Math.PI - 90}) translate(${d.y},0)`);
 
-    // Add circles to nodes
+    // Add circles and interactions
+    addNodeCircles(node, tooltip);
+
+    // Add labels (skip root node)
+    node.filter(d => d.data.type !== 'root')
+        .append('text')
+        .attr('dy', '0.31em')
+        .attr('x', d => d.x < Math.PI === !d.children ? 10 : -10)
+        .attr('text-anchor', d => d.x < Math.PI === !d.children ? 'start' : 'end')
+        .attr('transform', d => d.x >= Math.PI ? 'rotate(180)' : null)
+        .attr('fill', textColour)
+        .text(d => d.data.name)
+        .style('font-size', d => {
+            if (d.data.type === 'category') return '15px';
+            if (d.depth === 2) return '14px';
+            if (d.depth === 3) return '13px';
+            return '12px';
+        })
+        .style('font-weight', d => d.data.type === 'category' ? '600' : '500')
+        .clone(true).lower()
+        .attr('stroke', strokeColour)
+        .attr('stroke-width', 4);
+}
+
+function renderTidyTree(container, data, tooltip, width, height, textColour, strokeColour) {
+    // Calculate tree dimensions - horizontal layout
+    const marginTop = 20;
+    const marginRight = 150;
+    const marginBottom = 20;
+    const marginLeft = 80;
+
+    // Track pan offset
+    let panX = 0;
+    let panY = 0;
+
+    // Create hierarchy and calculate depth
+    const root = d3.hierarchy(data);
+    const treeHeight = (root.leaves().length + 1) * 25; // Dynamic height based on nodes
+    const treeWidth = width - marginLeft - marginRight;
+
+    // Create tree layout - horizontal orientation
+    const tree = d3.tree()
+        .size([treeHeight, treeWidth])
+        .separation((a, b) => (a.parent === b.parent ? 1 : 1.5));
+
+    tree(root);
+
+    // Create SVG with dynamic viewBox
+    const svg = d3.select(container)
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', [-marginLeft, -marginTop, width, Math.max(height, treeHeight + marginTop + marginBottom)])
+        .attr('style', 'max-width: 100%; height: auto; font: 12px sans-serif; cursor: grab;');
+
+    // Create a group for all content
+    const g = svg.append('g');
+
+    // Helper to apply current transform
+    function applyTransform(scale) {
+        g.attr('transform', `translate(${panX}, ${panY}) scale(${scale})`);
+    }
+
+    // Zoom behaviour
+    const zoom = d3.zoom()
+        .scaleExtent([0.3, 3])
+        .filter(event => event.type === 'wheel' || event.type === 'dblclick')
+        .on('zoom', (event) => {
+            applyTransform(event.transform.k);
+        });
+
+    svg.call(zoom);
+
+    // Drag to pan (no rotation for tidy tree)
+    let panStartX = 0;
+    let panStartY = 0;
+
+    const drag = d3.drag()
+        .on('start', (event) => {
+            svg.attr('style', 'max-width: 100%; height: auto; font: 12px sans-serif; cursor: grabbing;');
+            panStartX = panX;
+            panStartY = panY;
+        })
+        .on('drag', (event) => {
+            panX = panStartX + event.x - event.subject.x;
+            panY = panStartY + event.y - event.subject.y;
+            const currentScale = d3.zoomTransform(svg.node()).k;
+            applyTransform(currentScale);
+        })
+        .on('end', () => {
+            svg.attr('style', 'max-width: 100%; height: auto; font: 12px sans-serif; cursor: grab;');
+        });
+
+    svg.call(drag);
+
+    // Create links - horizontal curved links
+    g.append('g')
+        .attr('fill', 'none')
+        .attr('stroke', '#94a3b8')
+        .attr('stroke-opacity', 0.4)
+        .attr('stroke-width', 1.5)
+        .selectAll('path')
+        .data(root.links())
+        .join('path')
+        .attr('d', d3.linkHorizontal()
+            .x(d => d.y)
+            .y(d => d.x));
+
+    // Create nodes
+    const node = g.append('g')
+        .selectAll('g')
+        .data(root.descendants())
+        .join('g')
+        .attr('transform', d => `translate(${d.y},${d.x})`);
+
+    // Add circles and interactions
+    addNodeCircles(node, tooltip);
+
+    // Add labels
+    node.filter(d => d.data.type !== 'root')
+        .append('text')
+        .attr('dy', '0.31em')
+        .attr('x', d => d.children ? -10 : 10)
+        .attr('text-anchor', d => d.children ? 'end' : 'start')
+        .attr('fill', textColour)
+        .text(d => d.data.name)
+        .style('font-size', d => {
+            if (d.data.type === 'category') return '14px';
+            if (d.depth === 2) return '13px';
+            return '12px';
+        })
+        .style('font-weight', d => d.data.type === 'category' ? '600' : '500')
+        .clone(true).lower()
+        .attr('stroke', strokeColour)
+        .attr('stroke-width', 4);
+
+    // Add root label
+    node.filter(d => d.data.type === 'root')
+        .append('text')
+        .attr('dy', '0.31em')
+        .attr('x', -10)
+        .attr('text-anchor', 'end')
+        .attr('fill', textColour)
+        .text(d => d.data.name)
+        .style('font-size', '16px')
+        .style('font-weight', '700')
+        .clone(true).lower()
+        .attr('stroke', strokeColour)
+        .attr('stroke-width', 4);
+}
+
+function addNodeCircles(node, tooltip) {
     node.append('circle')
         .attr('fill', d => {
             if (d.data.type === 'root') return '#6366f1';
             if (d.data.type === 'category') return getColour(d.data.colour);
-            // For skills, use the colour property or inherit from category
             return getColour(d.data.colour);
         })
         .attr('r', d => {
@@ -257,7 +439,6 @@ function initSkillsVisualization() {
         .on('mouseenter', (event, d) => {
             if (d.data.type !== 'root') {
                 showTooltip(tooltip, event, d);
-                // Highlight the node
                 d3.select(event.target)
                     .transition()
                     .duration(150)
@@ -271,7 +452,6 @@ function initSkillsVisualization() {
         })
         .on('mouseleave', (event, d) => {
             hideTooltip(tooltip);
-            // Restore node size
             d3.select(event.target)
                 .transition()
                 .duration(150)
@@ -281,42 +461,19 @@ function initSkillsVisualization() {
                     return 4;
                 });
         });
-
-    // Detect dark mode
-    const isDarkMode = document.documentElement.classList.contains('dark') ||
-        window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    const textColour = isDarkMode ? '#e4e4e7' : '#3f3f46'; // zinc-200 / zinc-700
-    const strokeColour = isDarkMode ? '#27272a' : '#ffffff'; // zinc-800 / white
-
-    // Add labels (skip root node - it just clutters the centre)
-    node.filter(d => d.data.type !== 'root')
-        .append('text')
-        .attr('dy', '0.31em')
-        .attr('x', d => d.x < Math.PI === !d.children ? 10 : -10)
-        .attr('text-anchor', d => d.x < Math.PI === !d.children ? 'start' : 'end')
-        .attr('transform', d => d.x >= Math.PI ? 'rotate(180)' : null)
-        .attr('fill', textColour)
-        .text(d => d.data.name)
-        .style('font-size', d => {
-            if (d.data.type === 'category') return '15px';
-            // Skill sizes based on depth
-            if (d.depth === 2) return '14px'; // Direct skills under category
-            if (d.depth === 3) return '13px'; // Child skills
-            return '12px'; // Grandchildren and deeper
-        })
-        .style('font-weight', d => d.data.type === 'category' ? '600' : '500')
-        .clone(true).lower()
-        .attr('stroke', strokeColour)
-        .attr('stroke-width', 4);
 }
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initSkillsVisualization);
+    document.addEventListener('DOMContentLoaded', () => initSkillsVisualization('radial'));
 } else {
-    initSkillsVisualization();
+    initSkillsVisualization('radial');
 }
 
 // Re-initialize on Livewire navigation (if using wire:navigate)
-document.addEventListener('livewire:navigated', initSkillsVisualization);
+document.addEventListener('livewire:navigated', () => initSkillsVisualization(currentLayout));
+
+// Listen for layout changes from Alpine
+document.addEventListener('layout-changed', (event) => {
+    initSkillsVisualization(event.detail.layout);
+});

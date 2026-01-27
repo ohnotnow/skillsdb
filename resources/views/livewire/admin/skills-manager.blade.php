@@ -1,6 +1,9 @@
 <div>
     <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
         <flux:heading size="xl" level="1">Manage Skills</flux:heading>
+        <flux:button href="{{ route('admin.skills.visualization') }}" variant="ghost" icon="share" size="sm">
+            Skills Map
+        </flux:button>
     </div>
 
     <flux:tab.group>
