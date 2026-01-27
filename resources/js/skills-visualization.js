@@ -124,8 +124,10 @@ function initSkillsVisualization() {
     const outerRadius = Math.min(width, height) / 2 - 100;
     const innerRadius = 80; // Push categories away from centre
 
-    // Track rotation angle
+    // Track rotation angle and pan offset
     let currentRotation = 0;
+    let panX = 0;
+    let panY = 0;
 
     // Create SVG
     const svg = d3.select(container)
@@ -138,34 +140,55 @@ function initSkillsVisualization() {
     // Create a group for all content (for zoom/rotate transforms)
     const g = svg.append('g');
 
+    // Helper to apply current transform
+    function applyTransform(scale) {
+        g.attr('transform', `translate(${panX}, ${panY}) rotate(${currentRotation}) scale(${scale})`);
+    }
+
     // Zoom behaviour (mouse wheel)
     const zoom = d3.zoom()
         .scaleExtent([0.5, 3])
         .filter(event => event.type === 'wheel' || event.type === 'dblclick')
         .on('zoom', (event) => {
-            g.attr('transform', `rotate(${currentRotation}) scale(${event.transform.k})`);
+            applyTransform(event.transform.k);
         });
 
     svg.call(zoom);
 
-    // Drag-to-rotate behaviour
+    // Drag behaviour: rotate normally, pan with Shift held
     let dragStartAngle = 0;
     let rotationAtDragStart = 0;
+    let panStartX = 0;
+    let panStartY = 0;
+    let isPanning = false;
 
     const drag = d3.drag()
         .on('start', (event) => {
-            svg.attr('style', 'max-width: 100%; height: auto; font: 12px sans-serif; cursor: grabbing;');
-            // Calculate starting angle from centre
-            dragStartAngle = Math.atan2(event.y, event.x) * 180 / Math.PI;
-            rotationAtDragStart = currentRotation;
+            isPanning = event.sourceEvent.shiftKey;
+
+            if (isPanning) {
+                svg.attr('style', 'max-width: 100%; height: auto; font: 12px sans-serif; cursor: move;');
+                panStartX = panX;
+                panStartY = panY;
+            } else {
+                svg.attr('style', 'max-width: 100%; height: auto; font: 12px sans-serif; cursor: grabbing;');
+                dragStartAngle = Math.atan2(event.y, event.x) * 180 / Math.PI;
+                rotationAtDragStart = currentRotation;
+            }
         })
         .on('drag', (event) => {
-            const currentAngle = Math.atan2(event.y, event.x) * 180 / Math.PI;
-            const deltaAngle = dragStartAngle - currentAngle;
-            currentRotation = rotationAtDragStart + deltaAngle;
-
             const currentScale = d3.zoomTransform(svg.node()).k;
-            g.attr('transform', `rotate(${currentRotation}) scale(${currentScale})`);
+
+            if (isPanning) {
+                panX = panStartX + event.x - event.subject.x;
+                panY = panStartY + event.y - event.subject.y;
+            } else {
+                const currentAngle = Math.atan2(event.y, event.x) * 180 / Math.PI;
+                const deltaAngle = dragStartAngle - currentAngle;
+                currentRotation = rotationAtDragStart + deltaAngle;
+            }
+
+            applyTransform(currentScale);
         })
         .on('end', () => {
             svg.attr('style', 'max-width: 100%; height: auto; font: 12px sans-serif; cursor: grab;');
