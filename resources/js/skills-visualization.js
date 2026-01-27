@@ -419,10 +419,55 @@ function renderTidyTree(container, data, tooltip, width, height, textColour, str
 }
 
 function renderForceDirected(container, data, tooltip, width, height, textColour, strokeColour) {
-    // Create hierarchy and flatten to nodes/links for force simulation
+    // Create hierarchy
     const root = d3.hierarchy(data);
-    const nodes = root.descendants();
-    const links = root.links();
+
+    // Track expansion state - categories start collapsed
+    const expandedNodes = new Set();
+
+    // Track which nodes have been positioned (to initialize new nodes near parent)
+    const positionedNodes = new Set();
+
+    // Get visible nodes based on expansion state
+    function getVisibleNodes() {
+        const visible = [];
+        root.each(d => {
+            // Root and categories always visible
+            if (d.depth <= 1) {
+                visible.push(d);
+                return;
+            }
+            // Skills visible if their parent (category) is expanded
+            // Check all ancestors - if any ancestor is collapsed, this node is hidden
+            let ancestor = d.parent;
+            let isVisible = true;
+            while (ancestor && ancestor.depth >= 1) {
+                if (!expandedNodes.has(ancestor)) {
+                    isVisible = false;
+                    break;
+                }
+                ancestor = ancestor.parent;
+            }
+            if (isVisible) {
+                // Initialize new nodes near their parent's position
+                if (!positionedNodes.has(d) && d.parent) {
+                    d.x = d.parent.x + (Math.random() - 0.5) * 20;
+                    d.y = d.parent.y + (Math.random() - 0.5) * 20;
+                    positionedNodes.add(d);
+                }
+                visible.push(d);
+            }
+        });
+        return visible;
+    }
+
+    // Get visible links based on visible nodes
+    function getVisibleLinks(visibleNodes) {
+        const nodeSet = new Set(visibleNodes);
+        return root.links().filter(link =>
+            nodeSet.has(link.source) && nodeSet.has(link.target)
+        );
+    }
 
     // Create SVG
     const svg = d3.select(container)
@@ -444,12 +489,20 @@ function renderForceDirected(container, data, tooltip, width, height, textColour
 
     svg.call(zoom);
 
-    // Create force simulation
-    const simulation = d3.forceSimulation(nodes)
-        .force('link', d3.forceLink(links)
+    // Groups for links and nodes
+    const linkGroup = g.append('g')
+        .attr('fill', 'none')
+        .attr('stroke', '#94a3b8')
+        .attr('stroke-opacity', 0.4)
+        .attr('stroke-width', 1.5);
+
+    const nodeGroup = g.append('g');
+
+    // Create force simulation (will be updated with visible nodes)
+    const simulation = d3.forceSimulation()
+        .force('link', d3.forceLink()
             .id(d => d.index)
             .distance(d => {
-                // Shorter links for deeper nodes
                 if (d.source.depth === 0) return 120;
                 if (d.source.depth === 1) return 80;
                 return 60;
@@ -457,12 +510,11 @@ function renderForceDirected(container, data, tooltip, width, height, textColour
             .strength(0.8))
         .force('charge', d3.forceManyBody()
             .strength(d => {
-                // Stronger repulsion for categories
                 if (d.data.type === 'root') return -400;
                 if (d.data.type === 'category') return -200;
                 return -80;
             }))
-        .force('center', d3.forceCenter(width / 2, height / 2))
+        .force('center', d3.forceCenter(width / 2, height / 2).strength(0.05))
         .force('collision', d3.forceCollide()
             .radius(d => {
                 if (d.data.type === 'root') return 30;
@@ -470,103 +522,12 @@ function renderForceDirected(container, data, tooltip, width, height, textColour
                 return 20;
             }));
 
-    // Create links - straight lines
-    const link = g.append('g')
-        .attr('fill', 'none')
-        .attr('stroke', '#94a3b8')
-        .attr('stroke-opacity', 0.4)
-        .attr('stroke-width', 1.5)
-        .selectAll('line')
-        .data(links)
-        .join('line');
-
-    // Create node groups
-    const node = g.append('g')
-        .selectAll('g')
-        .data(nodes)
-        .join('g')
-        .style('cursor', 'grab');
-
-    // Node circles - slightly larger for easier grabbing
-    node.append('circle')
-        .attr('fill', d => {
-            if (d.data.type === 'root') return '#6366f1';
-            if (d.data.type === 'category') return getColour(d.data.colour);
-            return getColour(d.data.colour);
-        })
-        .attr('r', d => {
-            if (d.data.type === 'root') return 12;
-            if (d.data.type === 'category') return 10;
-            return 7;
-        })
-        .attr('stroke', '#fff')
-        .attr('stroke-width', 2)
-        .on('click', (event, d) => {
-            if (d.data.type === 'skill' && d.data.id) {
-                window.location.href = `/admin/dashboard?tab=team&skillFilter=${d.data.id}`;
-            }
-        })
-        .on('mouseenter', (event, d) => {
-            if (d.data.type !== 'root') {
-                showTooltip(tooltip, event, d);
-                d3.select(event.target)
-                    .transition()
-                    .duration(150)
-                    .attr('r', d.data.type === 'category' ? 13 : 10);
-            }
-        })
-        .on('mousemove', (event, d) => {
-            if (d.data.type !== 'root') {
-                showTooltip(tooltip, event, d);
-            }
-        })
-        .on('mouseleave', (event, d) => {
-            hideTooltip(tooltip);
-            d3.select(event.target)
-                .transition()
-                .duration(150)
-                .attr('r', () => {
-                    if (d.data.type === 'root') return 12;
-                    if (d.data.type === 'category') return 10;
-                    return 7;
-                });
-        });
-
-    // Add labels
-    node.filter(d => d.data.type !== 'root')
-        .append('text')
-        .attr('dy', '0.31em')
-        .attr('x', d => d.data.type === 'category' ? 14 : 11)
-        .attr('fill', textColour)
-        .text(d => d.data.name)
-        .style('font-size', d => d.data.type === 'category' ? '13px' : '11px')
-        .style('font-weight', d => d.data.type === 'category' ? '600' : '500')
-        .style('pointer-events', 'none')
-        .clone(true).lower()
-        .attr('stroke', strokeColour)
-        .attr('stroke-width', 3);
-
-    // Root label
-    node.filter(d => d.data.type === 'root')
-        .append('text')
-        .attr('dy', '0.31em')
-        .attr('x', 16)
-        .attr('fill', textColour)
-        .text(d => d.data.name)
-        .style('font-size', '14px')
-        .style('font-weight', '700')
-        .style('pointer-events', 'none')
-        .clone(true).lower()
-        .attr('stroke', strokeColour)
-        .attr('stroke-width', 3);
-
-    // Drag behaviour - nodes feel 'weighty'
+    // Drag behaviour
     const drag = d3.drag()
         .on('start', (event, d) => {
             if (!event.active) simulation.alphaTarget(0.3).restart();
             d.fx = d.x;
             d.fy = d.y;
-            d3.select(event.sourceEvent.target.parentNode).style('cursor', 'grabbing');
         })
         .on('drag', (event, d) => {
             d.fx = event.x;
@@ -574,24 +535,198 @@ function renderForceDirected(container, data, tooltip, width, height, textColour
         })
         .on('end', (event, d) => {
             if (!event.active) simulation.alphaTarget(0);
-            // Release the node to let it settle naturally
             d.fx = null;
             d.fy = null;
-            d3.select(event.sourceEvent.target.parentNode).style('cursor', 'grab');
         });
 
-    node.call(drag);
+    // Update the visualization
+    function update() {
+        const visibleNodes = getVisibleNodes();
+        const visibleLinks = getVisibleLinks(visibleNodes);
 
-    // Update positions on each tick
-    simulation.on('tick', () => {
-        link
-            .attr('x1', d => d.source.x)
-            .attr('y1', d => d.source.y)
-            .attr('x2', d => d.target.x)
-            .attr('y2', d => d.target.y);
+        // Update links
+        const link = linkGroup.selectAll('line')
+            .data(visibleLinks, d => `${d.source.data.name}-${d.target.data.name}`);
 
-        node.attr('transform', d => `translate(${d.x},${d.y})`);
-    });
+        link.exit().remove();
+
+        const linkEnter = link.enter().append('line');
+
+        const linkMerge = linkEnter.merge(link);
+
+        // Update nodes
+        const node = nodeGroup.selectAll('g.node')
+            .data(visibleNodes, d => d.data.name + d.depth);
+
+        node.exit().remove();
+
+        const nodeEnter = node.enter()
+            .append('g')
+            .attr('class', 'node')
+            .style('cursor', 'grab');
+
+        // Add circles to new nodes
+        nodeEnter.append('circle')
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 2);
+
+        // Add expand indicator for categories with children
+        nodeEnter.filter(d => d.data.type === 'category' && d.children?.length)
+            .append('text')
+            .attr('class', 'expand-indicator')
+            .attr('dy', '0.35em')
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#fff')
+            .style('font-size', '10px')
+            .style('font-weight', 'bold')
+            .style('pointer-events', 'none');
+
+        // Add labels
+        nodeEnter.filter(d => d.data.type !== 'root')
+            .append('text')
+            .attr('class', 'label')
+            .attr('dy', '0.31em')
+            .style('pointer-events', 'none');
+
+        nodeEnter.filter(d => d.data.type !== 'root')
+            .append('text')
+            .attr('class', 'label-bg')
+            .attr('dy', '0.31em')
+            .style('pointer-events', 'none');
+
+        // Root label
+        nodeEnter.filter(d => d.data.type === 'root')
+            .append('text')
+            .attr('class', 'label')
+            .attr('dy', '0.31em')
+            .attr('x', 16)
+            .attr('fill', textColour)
+            .style('font-size', '14px')
+            .style('font-weight', '700')
+            .style('pointer-events', 'none');
+
+        nodeEnter.filter(d => d.data.type === 'root')
+            .append('text')
+            .attr('class', 'label-bg')
+            .attr('dy', '0.31em')
+            .attr('x', 16)
+            .attr('stroke', strokeColour)
+            .attr('stroke-width', 3)
+            .style('font-size', '14px')
+            .style('font-weight', '700')
+            .style('pointer-events', 'none');
+
+        const nodeMerge = nodeEnter.merge(node);
+
+        // Update circle attributes
+        nodeMerge.select('circle')
+            .attr('fill', d => {
+                if (d.data.type === 'root') return '#6366f1';
+                return getColour(d.data.colour);
+            })
+            .attr('r', d => {
+                if (d.data.type === 'root') return 12;
+                if (d.data.type === 'category') return 14;
+                return 7;
+            })
+            .on('click', (event, d) => {
+                event.stopPropagation();
+                if (d.data.type === 'category' && d.children?.length) {
+                    // Toggle expansion
+                    if (expandedNodes.has(d)) {
+                        expandedNodes.delete(d);
+                    } else {
+                        expandedNodes.add(d);
+                    }
+                    update();
+                } else if (d.data.type === 'skill' && d.data.id) {
+                    window.location.href = `/admin/dashboard?tab=team&skillFilter=${d.data.id}`;
+                }
+            })
+            .on('mouseenter', (event, d) => {
+                if (d.data.type !== 'root') {
+                    showTooltip(tooltip, event, d);
+                    d3.select(event.target)
+                        .transition()
+                        .duration(150)
+                        .attr('r', d.data.type === 'category' ? 17 : 10);
+                }
+            })
+            .on('mousemove', (event, d) => {
+                if (d.data.type !== 'root') {
+                    showTooltip(tooltip, event, d);
+                }
+            })
+            .on('mouseleave', (event, d) => {
+                hideTooltip(tooltip);
+                d3.select(event.target)
+                    .transition()
+                    .duration(150)
+                    .attr('r', () => {
+                        if (d.data.type === 'root') return 12;
+                        if (d.data.type === 'category') return 14;
+                        return 7;
+                    });
+            })
+            .style('cursor', d => {
+                if (d.data.type === 'category' && d.children?.length) return 'pointer';
+                if (d.data.type === 'skill') return 'pointer';
+                return 'grab';
+            });
+
+        // Update expand indicator
+        nodeMerge.select('.expand-indicator')
+            .text(d => expandedNodes.has(d) ? '−' : '+');
+
+        // Update labels
+        nodeMerge.filter(d => d.data.type !== 'root').select('.label')
+            .attr('x', d => d.data.type === 'category' ? 18 : 11)
+            .attr('fill', textColour)
+            .text(d => d.data.name)
+            .style('font-size', d => d.data.type === 'category' ? '13px' : '11px')
+            .style('font-weight', d => d.data.type === 'category' ? '600' : '500');
+
+        nodeMerge.filter(d => d.data.type !== 'root').select('.label-bg')
+            .attr('x', d => d.data.type === 'category' ? 18 : 11)
+            .attr('stroke', strokeColour)
+            .attr('stroke-width', 3)
+            .text(d => d.data.name)
+            .style('font-size', d => d.data.type === 'category' ? '13px' : '11px')
+            .style('font-weight', d => d.data.type === 'category' ? '600' : '500')
+            .lower();
+
+        nodeMerge.filter(d => d.data.type === 'root').select('.label')
+            .text(d => d.data.name);
+
+        nodeMerge.filter(d => d.data.type === 'root').select('.label-bg')
+            .text(d => d.data.name)
+            .lower();
+
+        nodeMerge.call(drag);
+
+        // Update simulation - use lower alpha on updates to avoid jarring reorganization
+        simulation.nodes(visibleNodes);
+        simulation.force('link').links(visibleLinks);
+        simulation.alpha(0.3).alphaDecay(0.02).restart();
+
+        simulation.on('tick', () => {
+            linkMerge
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
+
+            nodeMerge.attr('transform', d => `translate(${d.x},${d.y})`);
+        });
+    }
+
+    // Initialize root at center
+    root.x = width / 2;
+    root.y = height / 2;
+    positionedNodes.add(root);
+
+    // Initial render
+    update();
 }
 
 function addNodeCircles(node, tooltip) {
