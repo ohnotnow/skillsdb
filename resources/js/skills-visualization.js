@@ -47,7 +47,8 @@ function initSkillsVisualization() {
     // Get container dimensions
     const width = container.clientWidth;
     const height = container.clientHeight;
-    const radius = Math.min(width, height) / 2 - 80;
+    const outerRadius = Math.min(width, height) / 2 - 100;
+    const innerRadius = 80; // Push categories away from centre
 
     // Create SVG
     const svg = d3.select(container)
@@ -60,12 +61,19 @@ function initSkillsVisualization() {
     // Create hierarchy
     const root = d3.hierarchy(data);
 
-    // Create tree layout
+    // Create tree layout - use the range from inner to outer radius
     const tree = d3.tree()
-        .size([2 * Math.PI, radius])
+        .size([2 * Math.PI, outerRadius - innerRadius])
         .separation((a, b) => (a.parent === b.parent ? 1 : 2) / a.depth);
 
     tree(root);
+
+    // Offset all y values by innerRadius (except root which stays at centre)
+    root.each(d => {
+        if (d.depth > 0) {
+            d.y = d.y + innerRadius;
+        }
+    });
 
     // Create links
     svg.append('g')
@@ -109,24 +117,33 @@ function initSkillsVisualization() {
             }
         });
 
-    // Add labels
-    node.append('text')
+    // Detect dark mode
+    const isDarkMode = document.documentElement.classList.contains('dark') ||
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    const textColour = isDarkMode ? '#e4e4e7' : '#3f3f46'; // zinc-200 / zinc-700
+    const strokeColour = isDarkMode ? '#27272a' : '#ffffff'; // zinc-800 / white
+
+    // Add labels (skip root node - it just clutters the centre)
+    node.filter(d => d.data.type !== 'root')
+        .append('text')
         .attr('dy', '0.31em')
-        .attr('x', d => d.x < Math.PI === !d.children ? 6 : -6)
+        .attr('x', d => d.x < Math.PI === !d.children ? 10 : -10)
         .attr('text-anchor', d => d.x < Math.PI === !d.children ? 'start' : 'end')
         .attr('transform', d => d.x >= Math.PI ? 'rotate(180)' : null)
-        .attr('fill', 'currentColor')
-        .attr('class', 'text-zinc-700 dark:text-zinc-300')
+        .attr('fill', textColour)
         .text(d => d.data.name)
         .style('font-size', d => {
-            if (d.data.type === 'root') return '14px';
-            if (d.data.type === 'category') return '12px';
-            return '11px';
+            if (d.data.type === 'category') return '15px';
+            // Skill sizes based on depth
+            if (d.depth === 2) return '14px'; // Direct skills under category
+            if (d.depth === 3) return '13px'; // Child skills
+            return '12px'; // Grandchildren and deeper
         })
-        .style('font-weight', d => d.data.type === 'root' || d.data.type === 'category' ? '600' : '400')
+        .style('font-weight', d => d.data.type === 'category' ? '600' : '500')
         .clone(true).lower()
-        .attr('stroke', 'white')
-        .attr('stroke-width', 3);
+        .attr('stroke', strokeColour)
+        .attr('stroke-width', 4);
 }
 
 // Initialize when DOM is ready
