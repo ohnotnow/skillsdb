@@ -570,8 +570,8 @@ function renderForceDirected(container, data, tooltip, width, height, textColour
             .attr('stroke', '#fff')
             .attr('stroke-width', 2);
 
-        // Add expand indicator for categories with children
-        nodeEnter.filter(d => d.data.type === 'category' && d.children?.length)
+        // Add expand indicator for any node with children (categories and parent skills)
+        nodeEnter.filter(d => d.children?.length && d.data.type !== 'root')
             .append('text')
             .attr('class', 'expand-indicator')
             .attr('dy', '0.35em')
@@ -618,21 +618,25 @@ function renderForceDirected(container, data, tooltip, width, height, textColour
 
         const nodeMerge = nodeEnter.merge(node);
 
+        // Helper to get node radius
+        function getNodeRadius(d) {
+            if (d.data.type === 'root') return 12;
+            if (d.data.type === 'category') return 14;
+            if (d.children?.length) return 12; // Skills with children - same size as root
+            return 7;
+        }
+
         // Update circle attributes
         nodeMerge.select('circle')
             .attr('fill', d => {
                 if (d.data.type === 'root') return '#6366f1';
                 return getColour(d.data.colour);
             })
-            .attr('r', d => {
-                if (d.data.type === 'root') return 12;
-                if (d.data.type === 'category') return 14;
-                return 7;
-            })
+            .attr('r', getNodeRadius)
             .on('click', (event, d) => {
                 event.stopPropagation();
-                if (d.data.type === 'category' && d.children?.length) {
-                    // Toggle expansion
+                // Expand/collapse any node with children
+                if (d.children?.length && d.data.type !== 'root') {
                     if (expandedNodes.has(d)) {
                         expandedNodes.delete(d);
                     } else {
@@ -649,7 +653,7 @@ function renderForceDirected(container, data, tooltip, width, height, textColour
                     d3.select(event.target)
                         .transition()
                         .duration(150)
-                        .attr('r', d.data.type === 'category' ? 17 : 10);
+                        .attr('r', getNodeRadius(d) + 3);
                 }
             })
             .on('mousemove', (event, d) => {
@@ -662,14 +666,10 @@ function renderForceDirected(container, data, tooltip, width, height, textColour
                 d3.select(event.target)
                     .transition()
                     .duration(150)
-                    .attr('r', () => {
-                        if (d.data.type === 'root') return 12;
-                        if (d.data.type === 'category') return 14;
-                        return 7;
-                    });
+                    .attr('r', getNodeRadius(d));
             })
             .style('cursor', d => {
-                if (d.data.type === 'category' && d.children?.length) return 'pointer';
+                if (d.children?.length && d.data.type !== 'root') return 'pointer';
                 if (d.data.type === 'skill') return 'pointer';
                 return 'grab';
             });
@@ -678,16 +678,23 @@ function renderForceDirected(container, data, tooltip, width, height, textColour
         nodeMerge.select('.expand-indicator')
             .text(d => expandedNodes.has(d) ? '−' : '+');
 
+        // Helper to get label x offset (based on node size)
+        function getLabelOffset(d) {
+            if (d.data.type === 'category') return 18;
+            if (d.children?.length) return 16; // Skills with children
+            return 11;
+        }
+
         // Update labels
         nodeMerge.filter(d => d.data.type !== 'root').select('.label')
-            .attr('x', d => d.data.type === 'category' ? 18 : 11)
+            .attr('x', getLabelOffset)
             .attr('fill', textColour)
             .text(d => d.data.name)
             .style('font-size', d => d.data.type === 'category' ? '13px' : '11px')
             .style('font-weight', d => d.data.type === 'category' ? '600' : '500');
 
         nodeMerge.filter(d => d.data.type !== 'root').select('.label-bg')
-            .attr('x', d => d.data.type === 'category' ? 18 : 11)
+            .attr('x', getLabelOffset)
             .attr('stroke', strokeColour)
             .attr('stroke-width', 3)
             .text(d => d.data.name)
