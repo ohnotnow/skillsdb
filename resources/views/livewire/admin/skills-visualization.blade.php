@@ -22,6 +22,14 @@
                 >
                     Tree
                 </button>
+                <button
+                    type="button"
+                    class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer"
+                    :class="layout === 'force' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'"
+                    @click="layout = 'force'; $dispatch('layout-changed', { layout: 'force' })"
+                >
+                    Force
+                </button>
             </div>
             <flux:button href="{{ route('admin.skills') }}" variant="ghost" icon="arrow-left">
                 Back to Skills

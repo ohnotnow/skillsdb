@@ -147,8 +147,10 @@ function initSkillsVisualization(layout = 'radial') {
 
     if (layout === 'radial') {
         renderRadialTree(container, data, tooltip, width, height, textColour, strokeColour);
-    } else {
+    } else if (layout === 'tree') {
         renderTidyTree(container, data, tooltip, width, height, textColour, strokeColour);
+    } else if (layout === 'force') {
+        renderForceDirected(container, data, tooltip, width, height, textColour, strokeColour);
     }
 }
 
@@ -414,6 +416,182 @@ function renderTidyTree(container, data, tooltip, width, height, textColour, str
         .clone(true).lower()
         .attr('stroke', strokeColour)
         .attr('stroke-width', 4);
+}
+
+function renderForceDirected(container, data, tooltip, width, height, textColour, strokeColour) {
+    // Create hierarchy and flatten to nodes/links for force simulation
+    const root = d3.hierarchy(data);
+    const nodes = root.descendants();
+    const links = root.links();
+
+    // Create SVG
+    const svg = d3.select(container)
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', [0, 0, width, height])
+        .attr('style', 'max-width: 100%; height: auto; font: 12px sans-serif;');
+
+    // Create a group for all content
+    const g = svg.append('g');
+
+    // Zoom behaviour
+    const zoom = d3.zoom()
+        .scaleExtent([0.3, 3])
+        .on('zoom', (event) => {
+            g.attr('transform', event.transform);
+        });
+
+    svg.call(zoom);
+
+    // Create force simulation
+    const simulation = d3.forceSimulation(nodes)
+        .force('link', d3.forceLink(links)
+            .id(d => d.index)
+            .distance(d => {
+                // Shorter links for deeper nodes
+                if (d.source.depth === 0) return 120;
+                if (d.source.depth === 1) return 80;
+                return 60;
+            })
+            .strength(0.8))
+        .force('charge', d3.forceManyBody()
+            .strength(d => {
+                // Stronger repulsion for categories
+                if (d.data.type === 'root') return -400;
+                if (d.data.type === 'category') return -200;
+                return -80;
+            }))
+        .force('center', d3.forceCenter(width / 2, height / 2))
+        .force('collision', d3.forceCollide()
+            .radius(d => {
+                if (d.data.type === 'root') return 30;
+                if (d.data.type === 'category') return 25;
+                return 20;
+            }));
+
+    // Create links - straight lines
+    const link = g.append('g')
+        .attr('fill', 'none')
+        .attr('stroke', '#94a3b8')
+        .attr('stroke-opacity', 0.4)
+        .attr('stroke-width', 1.5)
+        .selectAll('line')
+        .data(links)
+        .join('line');
+
+    // Create node groups
+    const node = g.append('g')
+        .selectAll('g')
+        .data(nodes)
+        .join('g')
+        .style('cursor', 'grab');
+
+    // Node circles - slightly larger for easier grabbing
+    node.append('circle')
+        .attr('fill', d => {
+            if (d.data.type === 'root') return '#6366f1';
+            if (d.data.type === 'category') return getColour(d.data.colour);
+            return getColour(d.data.colour);
+        })
+        .attr('r', d => {
+            if (d.data.type === 'root') return 12;
+            if (d.data.type === 'category') return 10;
+            return 7;
+        })
+        .attr('stroke', '#fff')
+        .attr('stroke-width', 2)
+        .on('click', (event, d) => {
+            if (d.data.type === 'skill' && d.data.id) {
+                window.location.href = `/admin/dashboard?tab=team&skillFilter=${d.data.id}`;
+            }
+        })
+        .on('mouseenter', (event, d) => {
+            if (d.data.type !== 'root') {
+                showTooltip(tooltip, event, d);
+                d3.select(event.target)
+                    .transition()
+                    .duration(150)
+                    .attr('r', d.data.type === 'category' ? 13 : 10);
+            }
+        })
+        .on('mousemove', (event, d) => {
+            if (d.data.type !== 'root') {
+                showTooltip(tooltip, event, d);
+            }
+        })
+        .on('mouseleave', (event, d) => {
+            hideTooltip(tooltip);
+            d3.select(event.target)
+                .transition()
+                .duration(150)
+                .attr('r', () => {
+                    if (d.data.type === 'root') return 12;
+                    if (d.data.type === 'category') return 10;
+                    return 7;
+                });
+        });
+
+    // Add labels
+    node.filter(d => d.data.type !== 'root')
+        .append('text')
+        .attr('dy', '0.31em')
+        .attr('x', d => d.data.type === 'category' ? 14 : 11)
+        .attr('fill', textColour)
+        .text(d => d.data.name)
+        .style('font-size', d => d.data.type === 'category' ? '13px' : '11px')
+        .style('font-weight', d => d.data.type === 'category' ? '600' : '500')
+        .style('pointer-events', 'none')
+        .clone(true).lower()
+        .attr('stroke', strokeColour)
+        .attr('stroke-width', 3);
+
+    // Root label
+    node.filter(d => d.data.type === 'root')
+        .append('text')
+        .attr('dy', '0.31em')
+        .attr('x', 16)
+        .attr('fill', textColour)
+        .text(d => d.data.name)
+        .style('font-size', '14px')
+        .style('font-weight', '700')
+        .style('pointer-events', 'none')
+        .clone(true).lower()
+        .attr('stroke', strokeColour)
+        .attr('stroke-width', 3);
+
+    // Drag behaviour - nodes feel 'weighty'
+    const drag = d3.drag()
+        .on('start', (event, d) => {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+            d3.select(event.sourceEvent.target.parentNode).style('cursor', 'grabbing');
+        })
+        .on('drag', (event, d) => {
+            d.fx = event.x;
+            d.fy = event.y;
+        })
+        .on('end', (event, d) => {
+            if (!event.active) simulation.alphaTarget(0);
+            // Release the node to let it settle naturally
+            d.fx = null;
+            d.fy = null;
+            d3.select(event.sourceEvent.target.parentNode).style('cursor', 'grab');
+        });
+
+    node.call(drag);
+
+    // Update positions on each tick
+    simulation.on('tick', () => {
+        link
+            .attr('x1', d => d.source.x)
+            .attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x)
+            .attr('y2', d => d.target.y);
+
+        node.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
 }
 
 function addNodeCircles(node, tooltip) {
