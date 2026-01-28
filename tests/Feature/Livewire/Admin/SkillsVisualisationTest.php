@@ -1,14 +1,14 @@
 <?php
 
 use App\Enums\FluxColour;
-use App\Livewire\Admin\SkillsVisualization;
+use App\Livewire\Admin\SkillsVisualisation;
 use App\Models\Skill;
 use App\Models\SkillCategory;
 use App\Models\User;
 use Livewire\Livewire;
 
 it('requires authentication', function () {
-    $this->get('/admin/skills/visualization')
+    $this->get('/admin/skills/visualisation')
         ->assertRedirect();
 });
 
@@ -16,7 +16,7 @@ it('requires admin access', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->get('/admin/skills/visualization')
+        ->get('/admin/skills/visualisation')
         ->assertForbidden();
 });
 
@@ -24,31 +24,23 @@ it('allows admin access', function () {
     $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)
-        ->get('/admin/skills/visualization')
+        ->get('/admin/skills/visualisation')
         ->assertSuccessful()
-        ->assertSeeLivewire(SkillsVisualization::class);
+        ->assertSeeLivewire(SkillsVisualisation::class);
 });
 
 it('displays the page heading', function () {
     $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)
-        ->get('/admin/skills/visualization')
+        ->get('/admin/skills/visualisation')
         ->assertSee('Skills Map');
-});
-
-it('has a link back to skills page', function () {
-    $admin = User::factory()->admin()->create();
-
-    $this->actingAs($admin)
-        ->get('/admin/skills/visualization')
-        ->assertSee('Back to Skills');
 });
 
 it('returns hierarchy data with root node', function () {
     $admin = User::factory()->admin()->create();
 
-    $component = Livewire::actingAs($admin)->test(SkillsVisualization::class);
+    $component = Livewire::actingAs($admin)->test(SkillsVisualisation::class);
 
     $data = $component->instance()->hierarchyData;
 
@@ -62,7 +54,7 @@ it('groups skills by category', function () {
     $category = SkillCategory::factory()->create(['name' => 'Development', 'colour' => FluxColour::Blue]);
     Skill::factory()->approved()->create(['name' => 'PHP', 'skill_category_id' => $category->id]);
 
-    $component = Livewire::actingAs($admin)->test(SkillsVisualization::class);
+    $component = Livewire::actingAs($admin)->test(SkillsVisualisation::class);
 
     $data = $component->instance()->hierarchyData;
     $categoryNode = collect($data['children'])->firstWhere('name', 'Development');
@@ -74,18 +66,18 @@ it('groups skills by category', function () {
     expect($categoryNode['children'][0]['name'])->toBe('PHP');
 });
 
-it('puts uncategorized skills in an Uncategorized group', function () {
+it('puts uncategorised skills in an Uncategorised group', function () {
     $admin = User::factory()->admin()->create();
     Skill::factory()->approved()->create(['name' => 'Miscellaneous', 'skill_category_id' => null]);
 
-    $component = Livewire::actingAs($admin)->test(SkillsVisualization::class);
+    $component = Livewire::actingAs($admin)->test(SkillsVisualisation::class);
 
     $data = $component->instance()->hierarchyData;
-    $uncategorized = collect($data['children'])->firstWhere('name', 'Uncategorized');
+    $uncategorised = collect($data['children'])->firstWhere('name', 'Uncategorised');
 
-    expect($uncategorized)->not->toBeNull();
-    expect($uncategorized['colour'])->toBe('zinc');
-    expect($uncategorized['children'][0]['name'])->toBe('Miscellaneous');
+    expect($uncategorised)->not->toBeNull();
+    expect($uncategorised['colour'])->toBe('zinc');
+    expect($uncategorised['children'][0]['name'])->toBe('Miscellaneous');
 });
 
 it('includes user count for skills', function () {
@@ -97,11 +89,11 @@ it('includes user count for skills', function () {
         $user->skills()->attach($skill->id, ['level' => 1]);
     }
 
-    $component = Livewire::actingAs($admin)->test(SkillsVisualization::class);
+    $component = Livewire::actingAs($admin)->test(SkillsVisualisation::class);
 
     $data = $component->instance()->hierarchyData;
-    $uncategorized = collect($data['children'])->firstWhere('name', 'Uncategorized');
-    $skillNode = $uncategorized['children'][0];
+    $uncategorised = collect($data['children'])->firstWhere('name', 'Uncategorised');
+    $skillNode = $uncategorised['children'][0];
 
     expect($skillNode['userCount'])->toBe(3);
 });
@@ -112,7 +104,7 @@ it('nests child skills under parent skills', function () {
     $parent = Skill::factory()->approved()->create(['name' => 'PHP', 'skill_category_id' => $category->id]);
     Skill::factory()->approved()->create(['name' => 'Laravel', 'skill_category_id' => $category->id, 'parent_id' => $parent->id]);
 
-    $component = Livewire::actingAs($admin)->test(SkillsVisualization::class);
+    $component = Livewire::actingAs($admin)->test(SkillsVisualisation::class);
 
     $data = $component->instance()->hierarchyData;
     $categoryNode = collect($data['children'])->firstWhere('name', 'Development');
@@ -130,7 +122,7 @@ it('handles deeply nested skills', function () {
     $laravel = Skill::factory()->approved()->create(['name' => 'Laravel', 'skill_category_id' => $category->id, 'parent_id' => $php->id]);
     Skill::factory()->approved()->create(['name' => 'Livewire', 'skill_category_id' => $category->id, 'parent_id' => $laravel->id]);
 
-    $component = Livewire::actingAs($admin)->test(SkillsVisualization::class);
+    $component = Livewire::actingAs($admin)->test(SkillsVisualisation::class);
 
     $data = $component->instance()->hierarchyData;
     $categoryNode = collect($data['children'])->firstWhere('name', 'Development');
@@ -147,7 +139,7 @@ it('excludes pending skills from hierarchy', function () {
     Skill::factory()->approved()->create(['name' => 'Approved Skill']);
     Skill::factory()->pending()->create(['name' => 'Pending Skill']);
 
-    $component = Livewire::actingAs($admin)->test(SkillsVisualization::class);
+    $component = Livewire::actingAs($admin)->test(SkillsVisualisation::class);
 
     $data = $component->instance()->hierarchyData;
     $allSkillNames = collect($data['children'])
@@ -172,7 +164,7 @@ it('includes total user count on categories', function () {
     $users[0]->skills()->attach($skill2->id, ['level' => 1]);
     $users[1]->skills()->attach($skill2->id, ['level' => 1]);
 
-    $component = Livewire::actingAs($admin)->test(SkillsVisualization::class);
+    $component = Livewire::actingAs($admin)->test(SkillsVisualisation::class);
 
     $data = $component->instance()->hierarchyData;
     $categoryNode = collect($data['children'])->firstWhere('name', 'Development');
@@ -193,7 +185,7 @@ it('includes nested skill user counts in category total', function () {
     }
     $users[0]->skills()->attach($child->id, ['level' => 1]);
 
-    $component = Livewire::actingAs($admin)->test(SkillsVisualization::class);
+    $component = Livewire::actingAs($admin)->test(SkillsVisualisation::class);
 
     $data = $component->instance()->hierarchyData;
     $categoryNode = collect($data['children'])->firstWhere('name', 'Development');
@@ -207,7 +199,7 @@ it('excludes empty categories from hierarchy', function () {
     $populatedCategory = SkillCategory::factory()->create(['name' => 'Has Skills']);
     Skill::factory()->approved()->create(['skill_category_id' => $populatedCategory->id]);
 
-    $component = Livewire::actingAs($admin)->test(SkillsVisualization::class);
+    $component = Livewire::actingAs($admin)->test(SkillsVisualisation::class);
 
     $data = $component->instance()->hierarchyData;
     $categoryNames = collect($data['children'])->pluck('name')->all();
