@@ -422,6 +422,19 @@ function renderForceDirected(container, data, tooltip, width, height, textColour
     // Create hierarchy
     const root = d3.hierarchy(data);
 
+    // Calculate max userCount for scaling circle sizes
+    let maxUserCount = 1;
+    root.each(d => {
+        if (d.data.type === 'skill' && d.data.userCount > maxUserCount) {
+            maxUserCount = d.data.userCount;
+        }
+    });
+
+    // Create sqrt scale for skill node radius (area proportional to user count)
+    const radiusScale = d3.scaleSqrt()
+        .domain([0, maxUserCount])
+        .range([5, 22]);
+
     // Track expansion state - categories start collapsed
     const expandedNodes = new Set();
 
@@ -519,7 +532,8 @@ function renderForceDirected(container, data, tooltip, width, height, textColour
             .radius(d => {
                 if (d.data.type === 'root') return 30;
                 if (d.data.type === 'category') return 25;
-                return 20;
+                // Match visual radius plus padding for labels
+                return radiusScale(d.data.userCount || 0) + 12;
             }));
 
     // Drag behaviour
@@ -618,12 +632,12 @@ function renderForceDirected(container, data, tooltip, width, height, textColour
 
         const nodeMerge = nodeEnter.merge(node);
 
-        // Helper to get node radius
+        // Helper to get node radius - skills sized by user count
         function getNodeRadius(d) {
             if (d.data.type === 'root') return 12;
             if (d.data.type === 'category') return 14;
-            if (d.children?.length) return 12; // Skills with children - same size as root
-            return 7;
+            // Skills sized by user count (minimum 5px for skills with 0 users)
+            return radiusScale(d.data.userCount || 0);
         }
 
         // Update circle attributes
@@ -681,8 +695,8 @@ function renderForceDirected(container, data, tooltip, width, height, textColour
         // Helper to get label x offset (based on node size)
         function getLabelOffset(d) {
             if (d.data.type === 'category') return 18;
-            if (d.children?.length) return 16; // Skills with children
-            return 11;
+            // Offset based on dynamic radius
+            return getNodeRadius(d) + 4;
         }
 
         // Update labels
@@ -784,14 +798,19 @@ function addNodeCircles(node, tooltip) {
 }
 
 // Initialize when DOM is ready
+function getInitialLayout() {
+    const container = document.getElementById('skills-visualization');
+    return container?.getAttribute('data-initial-layout') || 'radial';
+}
+
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => initSkillsVisualization('radial'));
+    document.addEventListener('DOMContentLoaded', () => initSkillsVisualization(getInitialLayout()));
 } else {
-    initSkillsVisualization('radial');
+    initSkillsVisualization(getInitialLayout());
 }
 
 // Re-initialize on Livewire navigation (if using wire:navigate)
-document.addEventListener('livewire:navigated', () => initSkillsVisualization(currentLayout));
+document.addEventListener('livewire:navigated', () => initSkillsVisualization(getInitialLayout()));
 
 // Listen for layout changes from Alpine
 document.addEventListener('layout-changed', (event) => {

@@ -1,4 +1,4 @@
-<div class="h-full flex flex-col" x-data="{ layout: 'radial' }">
+<div class="h-full flex flex-col" x-data="{ layout: @js($layout) }">
     <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
             <flux:heading size="xl" level="1">Skills Map</flux:heading>
@@ -10,7 +10,7 @@
                     type="button"
                     class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer"
                     :class="layout === 'radial' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'"
-                    @click="layout = 'radial'; $dispatch('layout-changed', { layout: 'radial' })"
+                    @click="layout = 'radial'; $wire.set('layout', 'radial'); $dispatch('layout-changed', { layout: 'radial' })"
                 >
                     Radial
                 </button>
@@ -18,7 +18,7 @@
                     type="button"
                     class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer"
                     :class="layout === 'tree' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'"
-                    @click="layout = 'tree'; $dispatch('layout-changed', { layout: 'tree' })"
+                    @click="layout = 'tree'; $wire.set('layout', 'tree'); $dispatch('layout-changed', { layout: 'tree' })"
                 >
                     Tree
                 </button>
@@ -26,7 +26,7 @@
                     type="button"
                     class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer"
                     :class="layout === 'force' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'"
-                    @click="layout = 'force'; $dispatch('layout-changed', { layout: 'force' })"
+                    @click="layout = 'force'; $wire.set('layout', 'force'); $dispatch('layout-changed', { layout: 'force' })"
                 >
                     Force
                 </button>
@@ -43,6 +43,7 @@
             id="skills-visualization"
             class="absolute inset-0 overflow-hidden"
             data-hierarchy="{{ json_encode($this->hierarchyData) }}"
+            data-initial-layout="{{ $layout }}"
             wire:ignore
         >
             {{-- D3 will render here - placeholder shown until JS loads --}}
