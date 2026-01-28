@@ -50,7 +50,7 @@ class SkillsVisualisation extends Component
             $skillNodes = $rootSkillsWithoutCategory->map(fn ($skill) => $this->buildSkillNode($skill))->values()->all();
 
             $children[] = [
-                'name' => 'Uncategorized',
+                'name' => 'Uncategorised',
                 'type' => 'category',
                 'colour' => 'zinc',
                 'userCount' => $this->sumUserCounts($skillNodes),
