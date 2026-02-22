@@ -8,6 +8,7 @@ use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
+/** @property \Illuminate\Support\Collection $conversations */
 class ConversationHistory extends Component
 {
     public CoachMode $mode;

@@ -12,6 +12,12 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
+/**
+ * @property int $teamMemberCount
+ * @property \Illuminate\Database\Eloquent\Collection $approvedSkillsWithUsers
+ * @property \Illuminate\Database\Eloquent\Collection $allCategories
+ * @property array $categoryStrength
+ */
 #[Layout('components.layouts.app')]
 class SkillsDashboard extends Component
 {

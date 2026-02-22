@@ -1,0 +1,73 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/nesbot/carbon/extension.neon
+
+parameters:
+
+    paths:
+        - app/
+
+    level: 5
+
+    ignoreErrors:
+        # ---------------------------------------------------------------
+        # Laravel magic: Eloquent Model properties in closures
+        # When using ->map(), ->filter() etc, PHPStan loses the concrete
+        # model type and sees Illuminate\Database\Eloquent\Model instead.
+        # ---------------------------------------------------------------
+        - identifier: property.notFound
+          message: '#Access to an undefined property Illuminate\\Database\\Eloquent\\Model::#'
+        - identifier: property.notFound
+          message: '#Access to an undefined property Illuminate\\Database\\Eloquent\\Relations\\Pivot::#'
+        - identifier: argument.type
+          message: '#Illuminate\\Database\\Eloquent\\Model given#'
+        - identifier: assign.propertyType
+          message: '#does not accept Illuminate\\Database\\Eloquent\\Model#'
+        - identifier: argument.unresolvableType
+          message: '#contains unresolvable type#'
+
+        # ---------------------------------------------------------------
+        # Laravel magic: Eloquent casts (Carbon, enums)
+        # PHPStan doesn't recognise the casts() method, so it thinks
+        # date columns are strings and enum columns are string/int.
+        # ---------------------------------------------------------------
+        - identifier: method.nonObject
+          message: '#Cannot call method .+\(\) on string#'
+        - identifier: property.nonObject
+          message: '#Cannot access property \$value on (string|int)#'
+
+        # ---------------------------------------------------------------
+        # Laravel magic: Attribute accessors (eg full_name)
+        # The Attribute::get() style accessors aren't picked up by Larastan.
+        # ---------------------------------------------------------------
+        - identifier: property.notFound
+          message: '#\$full_name#'
+
+        # ---------------------------------------------------------------
+        # Laravel magic: Eloquent scopes on relations
+        # Calling scopes like ->approved() on a relation query builder.
+        # ---------------------------------------------------------------
+        - identifier: method.notFound
+          message: '#Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\.+::(approved|pending|personal|forTeam)\(\)#'
+
+        # ---------------------------------------------------------------
+        # Laravel magic: Socialite contracts vs concrete classes
+        # Socialite returns contract interfaces but we access concrete
+        # properties/methods on the underlying implementation.
+        # ---------------------------------------------------------------
+        - identifier: property.notFound
+          message: '#Laravel\\Socialite\\Contracts\\User::#'
+        - identifier: method.notFound
+          message: '#Laravel\\Socialite\\Contracts\\Provider::with\(\)#'
+
+        # ---------------------------------------------------------------
+        # Laravel magic: withCount() dynamic attributes
+        # ---------------------------------------------------------------
+        - identifier: property.notFound
+          message: '#\$recent_additions_count#'
+
+        # ---------------------------------------------------------------
+        # Laravel magic: Custom pivot model properties
+        # ---------------------------------------------------------------
+        - identifier: property.notFound
+          message: '#\$training_supplier_id#'

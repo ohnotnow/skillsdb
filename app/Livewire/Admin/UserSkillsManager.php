@@ -8,6 +8,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
+/** @property \Illuminate\Database\Eloquent\Collection $users */
 #[Layout('components.layouts.app')]
 class UserSkillsManager extends Component
 {

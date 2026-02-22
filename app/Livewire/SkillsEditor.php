@@ -11,6 +11,12 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
+/**
+ * @property \App\Models\User $user
+ * @property bool $isAdminContext
+ * @property \Illuminate\Database\Eloquent\Collection $skills
+ * @property array $skillLevels
+ */
 class SkillsEditor extends Component
 {
     public ?int $userId = null;

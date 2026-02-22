@@ -13,6 +13,15 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
+/**
+ * @property \Illuminate\Database\Eloquent\Collection $skills
+ * @property \Illuminate\Database\Eloquent\Collection $categories
+ * @property array $fluxColours
+ * @property array $filteredCategoryOptions
+ * @property \Illuminate\Support\Collection $filteredParentSkillOptions
+ * @property \App\Models\SkillCategory|null $deletingCategory
+ * @property \Illuminate\Database\Eloquent\Collection $migrationTargetCategories
+ */
 #[Layout('components.layouts.app')]
 class SkillsManager extends Component
 {

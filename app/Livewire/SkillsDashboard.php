@@ -8,6 +8,15 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
+/**
+ * @property \App\Models\User $user
+ * @property array $skillDistribution
+ * @property string $lastUpdatedText
+ * @property bool $hasStaleSkills
+ * @property \Illuminate\Support\Collection $trendingSkills
+ * @property array $skillsOverTime
+ * @property \Illuminate\Support\Collection $colleagueInsights
+ */
 class SkillsDashboard extends Component
 {
     public ?int $userId = null;

@@ -16,6 +16,17 @@ use Livewire\Component;
 use Ohffs\SimpleSpout\ExcelSheet;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * @property \Carbon\Carbon $earliestDate
+ * @property int $timelineMax
+ * @property \Carbon\Carbon $viewingDate
+ * @property \Illuminate\Database\Eloquent\Collection $users
+ * @property \Illuminate\Database\Eloquent\Collection $skills
+ * @property array $categoryColours
+ * @property \Illuminate\Database\Eloquent\Collection $allUsers
+ * @property \Illuminate\Database\Eloquent\Collection $allSkills
+ * @property array<int, array<int, \App\Enums\SkillLevel>> $skillLevelsAtDate
+ */
 #[Layout('components.layouts.app')]
 class SkillsMatrix extends Component
 {

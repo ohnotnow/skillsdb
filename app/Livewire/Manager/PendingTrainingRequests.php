@@ -17,6 +17,11 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
+/**
+ * @property \Illuminate\Database\Eloquent\Collection $pendingRequests
+ * @property \Illuminate\Database\Eloquent\Collection $teamMembers
+ * @property \Illuminate\Support\Collection $availableCoursesForEnrolling
+ */
 #[Layout('components.layouts.app')]
 class PendingTrainingRequests extends Component
 {

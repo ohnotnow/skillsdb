@@ -9,6 +9,14 @@ use Carbon\Carbon;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
+/**
+ * @property \Carbon\Carbon $earliestDate
+ * @property int $timelineMax
+ * @property \Carbon\Carbon $viewingDate
+ * @property \Illuminate\Support\Collection $users
+ * @property \Illuminate\Support\Collection $skills
+ * @property array $categoryColours
+ */
 class CompactMatrix extends Component
 {
     public int $timelinePosition = 0;
