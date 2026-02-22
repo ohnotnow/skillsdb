@@ -11,21 +11,20 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Laravel\Socialite\Facades\Socialite;
-use Livewire\Features\SupportRedirects\Redirector as LivewireRedirector;
 
 class SSOController extends Controller
 {
-    public function login() : View
+    public function login(): View
     {
         return view('auth.login');
     }
 
-    public function loggedOut() : View
+    public function loggedOut(): View
     {
         return view('auth.logged_out');
     }
 
-    public function localLogin(Request $request) : RedirectResponse|LivewireRedirector
+    public function localLogin(Request $request): RedirectResponse
     {
         if (config('sso.enabled', true)) {
             abort(403, 'SSO is enabled');
@@ -43,7 +42,7 @@ class SSOController extends Controller
         return redirect()->back()->withErrors(['username' => 'Invalid credentials']);
     }
 
-    public function ssoLogin() : RedirectResponse|LivewireRedirector
+    public function ssoLogin(): RedirectResponse
     {
         if (config('sso.enabled', true)) {
             $driver = Socialite::driver('keycloak');
@@ -59,7 +58,7 @@ class SSOController extends Controller
         return redirect()->route('login.local');
     }
 
-    public function handleProviderCallback(): RedirectResponse|LivewireRedirector
+    public function handleProviderCallback(): RedirectResponse
     {
         try {
             $ssoUser = Socialite::driver('keycloak')->user();
@@ -82,11 +81,11 @@ class SSOController extends Controller
             abort(403, 'Only admins can login');
         }
 
-        if (!$user && $this->shouldCreateNewUsers()) {
+        if (! $user && $this->shouldCreateNewUsers()) {
             $user = $this->createUser($ssoDetails);
         }
 
-        if (!$user) {
+        if (! $user) {
             Log::warning('Denying login attempt for unknown user', ['email' => $ssoDetails['email']]);
             abort(403, 'Authentication failed');
         }
@@ -97,7 +96,7 @@ class SSOController extends Controller
         return $this->getSuccessRedirect();
     }
 
-    public function logout(Request $request): RedirectResponse|LivewireRedirector
+    public function logout(Request $request): RedirectResponse
     {
         Auth::logout();
         $request->session()->invalidate();
@@ -107,19 +106,19 @@ class SSOController extends Controller
         return redirect()->route('logged_out');
     }
 
-    private function getSuccessRedirect(): RedirectResponse|LivewireRedirector
+    private function getSuccessRedirect(): RedirectResponse
     {
         return redirect()->intended(route('home'));
     }
 
     private function forbidsStudentsFromLoggingIn(\Laravel\Socialite\Contracts\User $ssoUser): bool
     {
-        return $this->isStudent($ssoUser) && !config('sso.allow_students', true);
+        return $this->isStudent($ssoUser) && ! config('sso.allow_students', true);
     }
 
     private function onlyAdminsCanLogin(?User $user): bool
     {
-        return config('sso.admins_only', false) && (!$user || !$user->is_admin);
+        return config('sso.admins_only', false) && (! $user || ! $user->is_admin);
     }
 
     private function shouldCreateNewUsers(): bool
@@ -157,7 +156,7 @@ class SSOController extends Controller
 
     private function isStaff(\Laravel\Socialite\Contracts\User $ssoUser): bool
     {
-        return !$this->looksLikeMatric($ssoUser->nickname);
+        return ! $this->looksLikeMatric($ssoUser->nickname);
     }
 
     private function looksLikeMatric(string $username): bool

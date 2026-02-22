@@ -87,6 +87,7 @@ class PrismProvider implements LlmProvider
         $messages = [];
 
         foreach ($history as $msg) {
+            /** @phpstan-ignore-next-line match.unhandled */
             $messages[] = match ($msg['role']) {
                 'user' => new UserMessage($msg['content']),
                 'assistant' => new AssistantMessage($msg['content']),

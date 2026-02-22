@@ -71,3 +71,11 @@ parameters:
         # ---------------------------------------------------------------
         - identifier: property.notFound
           message: '#\$training_supplier_id#'
+
+        # ---------------------------------------------------------------
+        # Nullsafe false positives
+        # Larastan doesn't correctly handle nullable relationships,
+        # first()/tryFrom() returns, etc — so it wrongly claims ?-> is
+        # unnecessary when the left side genuinely can be null.
+        # ---------------------------------------------------------------
+        - identifier: nullsafe.neverNull

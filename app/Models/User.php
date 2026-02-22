@@ -145,7 +145,7 @@ class User extends Authenticatable
             ->orderByDesc('created_at')
             ->first();
 
-        if (! $latestEvent || $latestEvent->event_type === SkillHistoryEvent::Removed) {
+        if (! $latestEvent || $latestEvent->event_type === SkillHistoryEvent::Removed) { /** @phpstan-ignore identical.alwaysFalse (event_type is cast to enum but PHPStan sees string from PHPDoc) */
             return null;
         }
 
@@ -235,7 +235,7 @@ class User extends Authenticatable
      * Uses SkillHistory to replay events and calculate actual points at each point in time.
      * Points are calculated as: Low=1, Medium=2, High=3.
      *
-     * @return array<int, array{month: string, points: int, events: array<string>}>
+     * @return array<int, array{month: string, points: int, events: array<string>, eventText: string}>
      */
     public function getSkillsOverTimeFromHistory(int $months = 6): array
     {

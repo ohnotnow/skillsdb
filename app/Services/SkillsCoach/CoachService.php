@@ -33,11 +33,13 @@ class CoachService
         // Get response from LLM
         $responseText = $this->provider->chat($message, $history, $user);
 
-        // Save and return the assistant's response
-        return $conversation->messages()->create([
+        /** @var CoachMessage $response */
+        $response = $conversation->messages()->create([
             'role' => CoachMessageRole::Assistant,
             'content' => $responseText,
         ]);
+
+        return $response;
     }
 
     /**
@@ -45,7 +47,10 @@ class CoachService
      */
     public function getOrCreateConversation(User $user): CoachConversation
     {
-        return $user->coachConversations()->firstOrCreate(['user_id' => $user->id]);
+        /** @var CoachConversation $conversation */
+        $conversation = $user->coachConversations()->firstOrCreate(['user_id' => $user->id]);
+
+        return $conversation;
     }
 
     /**
@@ -53,7 +58,10 @@ class CoachService
      */
     public function startNewConversation(User $user): CoachConversation
     {
-        return $user->coachConversations()->create();
+        /** @var CoachConversation $conversation */
+        $conversation = $user->coachConversations()->create();
+
+        return $conversation;
     }
 
     /**
@@ -66,7 +74,7 @@ class CoachService
         return $conversation->messages()
             ->oldest()
             ->get()
-            ->map(fn (CoachMessage $msg) => [
+            ->map(fn (CoachMessage $msg) => [/** @phpstan-ignore argument.type (collection loses concrete CoachMessage type) */
                 'role' => $msg->role->value,
                 'content' => $msg->content,
             ])

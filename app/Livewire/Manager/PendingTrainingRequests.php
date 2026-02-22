@@ -105,8 +105,10 @@ class PendingTrainingRequests extends Component
             'approved_at' => now(),
         ]);
 
+        /** @var \App\Models\TrainingCourse $course */
+        $course = $enrollment->trainingCourse;
         Mail::to($enrollment->user)->send(
-            new TrainingRequestApproved($enrollment->trainingCourse, Auth::user())
+            new TrainingRequestApproved($course, Auth::user())
         );
 
         Flux::toast(
@@ -129,8 +131,10 @@ class PendingTrainingRequests extends Component
             'rejection_reason' => $reason,
         ]);
 
+        /** @var \App\Models\TrainingCourse $course */
+        $course = $enrollment->trainingCourse;
         Mail::to($enrollment->user)->send(
-            new TrainingRequestRejected($enrollment->trainingCourse, Auth::user(), $reason)
+            new TrainingRequestRejected($course, Auth::user(), $reason)
         );
 
         Flux::toast(

@@ -91,6 +91,7 @@ class GetMemberSkills extends Tool
                 'since' => $since,
             ];
 
+            /** @phpstan-ignore-next-line match.unhandled */
             match ($level) {
                 SkillLevel::High => $grouped['expert'][] = $entry,
                 SkillLevel::Medium => $grouped['proficient'][] = $entry,

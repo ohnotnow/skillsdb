@@ -158,7 +158,7 @@ class SkillsMatrix extends Component
             $latest = $events->last();
             [$userId, $skillId] = explode('-', $key);
 
-            if ($latest->event_type !== SkillHistoryEvent::Removed && $latest->new_level) {
+            if ($latest->event_type !== SkillHistoryEvent::Removed && $latest->new_level) { /** @phpstan-ignore notIdentical.alwaysTrue (event_type is cast to enum but collection groupBy/last loses the SkillHistory type) */
                 $levels[(int) $userId][(int) $skillId] = SkillLevel::from($latest->new_level);
             }
         }
@@ -178,7 +178,7 @@ class SkillsMatrix extends Component
 
         $headers = ['Name', ...$skills->pluck('name')->toArray()];
 
-        $rows = $users->map(function ($user) use ($skills) {
+        $rows = $users->map(function ($user) use ($skills) { /** @var User $user */
             $row = [$user->full_name];
             foreach ($skills as $skill) {
                 $level = $user->getSkillLevel($skill);

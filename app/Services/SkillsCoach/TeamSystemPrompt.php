@@ -79,6 +79,7 @@ PROMPT;
             foreach ($member->skills as $skill) {
                 $uniqueSkills->push($skill->id);
 
+                /** @phpstan-ignore-next-line match.unhandled */
                 match ($skill->pivot->level) {
                     SkillLevel::High => $distribution['high']++,
                     SkillLevel::Medium => $distribution['medium']++,

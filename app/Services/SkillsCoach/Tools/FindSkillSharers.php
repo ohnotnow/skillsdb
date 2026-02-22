@@ -46,6 +46,7 @@ class FindSkillSharers extends Tool
                 'name' => $u->full_name,
                 'level' => $u->skills->first()->pivot->level->label(),
             ])
+            /** @phpstan-ignore-next-line match.unhandled */
             ->sortByDesc(fn ($s) => match ($s['level']) {
                 'High' => 3,
                 'Medium' => 2,
