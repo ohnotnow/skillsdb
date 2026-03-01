@@ -34,3 +34,7 @@ PROJECT_PLAN.md
 example-simple-spout.txt
 storage/debugbar/
 prism*
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db
