@@ -1,36 +1,45 @@
 <?php
 
-namespace App\Services\SkillsCoach\TeamTools;
+namespace App\Ai\Tools\TeamTools;
 
 use App\Enums\SkillHistoryEvent;
 use App\Models\SkillHistory;
 use App\Services\SkillsCoach\CoachContext;
-use Prism\Prism\Tool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Tools\Request;
 
-class GetRecentActivity extends Tool
+class GetRecentActivity implements Tool
 {
     use HandlesContactability;
 
     public function __construct(
         protected CoachContext $context
-    ) {
-        $this
-            ->as('get_recent_activity')
-            ->for('What has been happening with the team? Who is growing, who is stagnating, what skills are trending. Answers: "What has the team been up to?" or "Are people using the system?"')
-            ->withNumberParameter('days', 'Look back period in days (default 30)')
-            ->withStringParameter('person_name', 'Filter to a specific person (optional)')
-            ->using($this);
+    ) {}
+
+    public function description(): string
+    {
+        return 'What has been happening with the team? Who is growing, who is stagnating, what skills are trending. Answers: "What has the team been up to?" or "Are people using the system?"';
     }
 
-    public function __invoke(?int $days = 30, ?string $person_name = null): string
+    public function schema(JsonSchema $schema): array
     {
+        return [
+            'days' => $schema->integer()->min(1)->max(365),
+            'person_name' => $schema->string(),
+        ];
+    }
+
+    public function handle(Request $request): string
+    {
+        $days = $request['days'] ?? 30;
+        $person_name = $request['person_name'] ?? null;
         $team = $this->context->getTeam();
 
         if (! $team) {
             return json_encode(['error' => 'No team context set']);
         }
 
-        $days = $days ?? 30;
         $team->load('members');
         $members = $team->members;
         $memberIds = $members->pluck('id');

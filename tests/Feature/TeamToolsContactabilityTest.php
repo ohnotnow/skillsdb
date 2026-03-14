@@ -1,9 +1,10 @@
 <?php
 
+use App\Ai\Tools\TeamTools\GetTeamOverview;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\SkillsCoach\CoachContext;
-use App\Services\SkillsCoach\TeamTools\GetTeamOverview;
+use Laravel\Ai\Tools\Request;
 
 beforeEach(function () {
     $this->manager = User::factory()->create(['coach_contactable' => true]);
@@ -18,7 +19,7 @@ it('shows people with coach_contactable=true normally', function () {
     $this->team->members()->attach($contactablePerson);
 
     $tool = new GetTeamOverview($this->context);
-    $result = json_decode($tool(), true);
+    $result = json_decode($tool->handle(new Request), true);
 
     $person = collect($result['people'])->firstWhere('name', $contactablePerson->full_name);
     expect($person)->not->toBeNull();
@@ -30,7 +31,7 @@ it('shows direct reports normally regardless of coach_contactable flag', functio
     $this->team->members()->attach($directReport);
 
     $tool = new GetTeamOverview($this->context);
-    $result = json_decode($tool(), true);
+    $result = json_decode($tool->handle(new Request), true);
 
     $person = collect($result['people'])->firstWhere('name', $directReport->full_name);
     expect($person)->not->toBeNull();
@@ -50,7 +51,7 @@ it('adds manager contact note for non-direct-reports with coach_contactable=fals
     $viewingContext->setTeam($theirTeam);
 
     $tool = new GetTeamOverview($viewingContext);
-    $result = json_decode($tool(), true);
+    $result = json_decode($tool->handle(new Request), true);
 
     $person = collect($result['people'])->firstWhere('name', $nonContactablePerson->full_name);
     expect($person)->not->toBeNull();
@@ -68,7 +69,7 @@ it('works correctly when person is in multiple teams', function () {
     $otherTeam->members()->attach($sharedPerson);
 
     $tool = new GetTeamOverview($this->context);
-    $result = json_decode($tool(), true);
+    $result = json_decode($tool->handle(new Request), true);
 
     $person = collect($result['people'])->firstWhere('name', $sharedPerson->full_name);
     expect($person)->not->toBeNull();
@@ -85,7 +86,7 @@ it('shows person normally when they are managed by current user in any of their 
     $unrelatedTeam->members()->attach($person);
 
     $tool = new GetTeamOverview($this->context);
-    $result = json_decode($tool(), true);
+    $result = json_decode($tool->handle(new Request), true);
 
     $personData = collect($result['people'])->firstWhere('name', $person->full_name);
     expect($personData)->not->toHaveKey('contact_note');

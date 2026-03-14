@@ -2,24 +2,28 @@
 
 namespace App\Livewire;
 
+use App\Ai\Agents\PersonalCoachAgent;
+use App\Ai\Agents\TeamCoachAgent;
 use App\Enums\CoachMode;
+use App\Models\AgentConversation;
+use App\Models\AgentConversationMessage;
 use Flux;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
-/** @property \Illuminate\Support\Collection $conversations */
+/** @property Collection $conversations */
 class ConversationHistory extends Component
 {
     public CoachMode $mode;
 
     public ?int $teamId = null;
 
-    public ?int $currentConversationId = null;
+    public ?string $currentConversationId = null;
 
     public string $search = '';
 
-    public function mount(CoachMode $mode, ?int $teamId = null, ?int $currentConversationId = null): void
+    public function mount(CoachMode $mode, ?int $teamId = null, ?string $currentConversationId = null): void
     {
         $this->mode = $mode;
         $this->teamId = $teamId;
@@ -29,13 +33,17 @@ class ConversationHistory extends Component
     #[Computed]
     public function conversations(): Collection
     {
-        $query = auth()->user()->coachConversations()
-            ->where('mode', $this->mode)
-            ->with(['messages' => fn ($q) => $q->oldest()->limit(1)])
+        $agentClass = $this->mode === CoachMode::Team
+            ? TeamCoachAgent::class
+            : PersonalCoachAgent::class;
+
+        $query = AgentConversation::where('user_id', auth()->id())
+            ->forAgent($agentClass)
+            ->with(['messages' => fn ($q) => $q->where('role', 'user')->oldest()->limit(1)])
             ->latest();
 
         if ($this->mode === CoachMode::Team && $this->teamId) {
-            $query->where('team_id', $this->teamId);
+            $query->forTeam($this->teamId);
         }
 
         if ($this->search) {
@@ -45,19 +53,22 @@ class ConversationHistory extends Component
         return $query->get();
     }
 
-    public function selectConversation(int $conversationId): void
+    public function selectConversation(string $conversationId): void
     {
         $this->dispatch('conversation-selected', conversationId: $conversationId);
         Flux::modal('conversation-history')->close();
     }
 
-    public function deleteConversation(int $conversationId): void
+    public function deleteConversation(string $conversationId): void
     {
         if (! $this->conversations->contains('id', $conversationId)) {
             return;
         }
 
-        auth()->user()->coachConversations()->where('id', $conversationId)->delete();
+        AgentConversationMessage::where('conversation_id', $conversationId)->delete();
+        AgentConversation::where('id', $conversationId)
+            ->where('user_id', auth()->id())
+            ->delete();
 
         unset($this->conversations);
 
@@ -71,7 +82,10 @@ class ConversationHistory extends Component
         $ids = $this->conversations->pluck('id');
         $hadActive = $ids->contains($this->currentConversationId);
 
-        auth()->user()->coachConversations()->whereIn('id', $ids)->delete();
+        AgentConversationMessage::whereIn('conversation_id', $ids)->delete();
+        AgentConversation::whereIn('id', $ids)
+            ->where('user_id', auth()->id())
+            ->delete();
 
         unset($this->conversations);
 

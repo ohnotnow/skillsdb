@@ -2,12 +2,13 @@
 
 namespace App\Livewire\Admin;
 
+use App\Ai\Agents\TeamCoachAgent;
 use App\Enums\CoachMode;
 use App\Livewire\Concerns\HasCoachConversations;
-use App\Models\CoachConversation;
+use App\Models\AgentConversation;
+use App\Models\AgentConversationMessage;
 use App\Models\Team;
 use App\Services\SkillsCoach\CoachContext;
-use App\Services\SkillsCoach\CoachService;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -20,7 +21,7 @@ class TeamCoach extends Component
 
     public array $messages = [];
 
-    public ?int $conversationId = null;
+    public ?string $conversationId = null;
 
     public ?int $teamId = null;
 
@@ -28,8 +29,6 @@ class TeamCoach extends Component
     protected string $exportPrefix = 'team-coach-chat-';
 
     protected string $exportTitle = 'Team Coach Conversation';
-
-    protected array $exportEagerLoads = ['messages', 'team'];
 
     public function mount(): void
     {
@@ -42,7 +41,7 @@ class TeamCoach extends Component
         }
     }
 
-    public function send(CoachService $coach, CoachContext $context): void
+    public function send(CoachContext $context): void
     {
         $this->validate([
             'prompt' => ['required', 'string', 'max:1000'],
@@ -56,12 +55,9 @@ class TeamCoach extends Component
         }
 
         // Set context for team mode
+        $context->setUser($user);
         $context->setMode(CoachMode::Team);
         $context->setTeam($team);
-
-        $conversation = $this->conversationId
-            ? CoachConversation::find($this->conversationId)
-            : $this->getOrCreateTeamConversation($user, $team);
 
         // Add user message to UI immediately
         $this->messages[] = [
@@ -74,16 +70,25 @@ class TeamCoach extends Component
         $prompt = $this->prompt;
         $this->reset('prompt');
 
-        // Get response from coach (this persists both messages)
-        $response = $coach->chat($user, $prompt, $conversation);
+        $agent = TeamCoachAgent::make();
 
-        // Update conversation ID if this was a new conversation
-        $this->conversationId = $response->conversation->id;
+        $response = $this->conversationId
+            ? $agent->continue($this->conversationId, as: $user)->prompt($prompt)
+            : $agent->forUser($user)->prompt($prompt);
+
+        $this->conversationId = $response->conversationId;
+
+        // Store team_id in the user message's meta for filtering
+        AgentConversationMessage::where('conversation_id', $response->conversationId)
+            ->where('role', 'user')
+            ->latest()
+            ->first()
+            ?->update(['meta' => json_encode(['team_id' => $this->teamId])]);
 
         // Add assistant response to UI
         $this->messages[] = [
             'role' => 'assistant',
-            'content' => $response->content,
+            'content' => $response->text,
         ];
 
         $this->dispatch('message-received');
@@ -91,41 +96,31 @@ class TeamCoach extends Component
 
     public function clearChat(): void
     {
-        $user = auth()->user();
-        $team = Team::find($this->teamId);
-
-        if (! $team) {
-            return;
-        }
-
-        $conversation = $user->coachConversations()->create([
-            'mode' => CoachMode::Team,
-            'team_id' => $team->id,
-        ]);
-
-        $this->conversationId = $conversation->id;
+        $this->conversationId = null;
         $this->reset('messages');
     }
 
-    protected function getJsonConversationData(CoachConversation $conversation): array
+    protected function getJsonConversationData(AgentConversation $conversation): array
     {
         return [
             'id' => $conversation->id,
             'mode' => 'team',
-            'team' => $conversation->team?->name,
+            'team' => Team::find($this->teamId)?->name,
             'created_at' => $conversation->created_at->toIso8601String(),
-            'messages' => $conversation->messages->map(fn ($m) => [
-                'role' => $m->role->value,
-                'content' => $m->content,
-                'created_at' => $m->created_at->toIso8601String(),
-            ])->toArray(),
+            'messages' => $conversation->messages
+                ->whereIn('role', ['user', 'assistant'])
+                ->map(fn ($m) => [
+                    'role' => $m->role,
+                    'content' => $m->content,
+                    'created_at' => $m->created_at->toIso8601String(),
+                ])->values()->toArray(),
         ];
     }
 
-    protected function getMarkdownHeader(CoachConversation $conversation): string
+    protected function getMarkdownHeader(AgentConversation $conversation): string
     {
         return "# {$this->exportTitle}\n\n"
-            .'Team: '.$conversation->team?->name."\n"
+            .'Team: '.Team::find($this->teamId)?->name."\n"
             .'Exported: '.now()->format('F j, Y g:ia')."\n"
             .'Started: '.$conversation->created_at->format('F j, Y g:ia')."\n\n"
             ."---\n\n";
@@ -136,32 +131,27 @@ class TeamCoach extends Component
         $user = auth()->user();
 
         $conversation = $this->conversationId
-            ? $user->coachConversations()->find($this->conversationId)
-            : $user->coachConversations()->forTeam($this->teamId)->first();
+            ? $user->agentConversations()->find($this->conversationId)
+            : AgentConversation::where('user_id', $user->id)
+                ->forAgent(TeamCoachAgent::class)
+                ->forTeam($this->teamId)
+                ->latest()
+                ->first();
 
         if ($conversation) {
             $this->conversationId = $conversation->id;
             $this->messages = $conversation->messages()
+                ->whereIn('role', ['user', 'assistant'])
                 ->oldest()
                 ->get()
                 ->map(fn ($m) => [
-                    'role' => $m->role->value,
+                    'role' => $m->role,
                     'content' => $m->content,
                 ])
                 ->toArray();
         } else {
             $this->reset('messages');
         }
-    }
-
-    protected function getOrCreateTeamConversation($user, Team $team): CoachConversation
-    {
-        return $user->coachConversations()
-            ->forTeam($team->id)
-            ->firstOrCreate([
-                'mode' => CoachMode::Team,
-                'team_id' => $team->id,
-            ]);
     }
 
     public function render()

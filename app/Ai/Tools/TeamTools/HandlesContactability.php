@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\SkillsCoach\TeamTools;
+namespace App\Ai\Tools\TeamTools;
 
 use App\Models\User;
 use App\Services\SkillsCoach\CoachContext;

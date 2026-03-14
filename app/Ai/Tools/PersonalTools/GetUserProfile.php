@@ -1,22 +1,29 @@
 <?php
 
-namespace App\Services\SkillsCoach\Tools;
+namespace App\Ai\Tools\PersonalTools;
 
 use App\Services\SkillsCoach\CoachContext;
-use Prism\Prism\Tool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Tools\Request;
 
-class GetUserProfile extends Tool
+class GetUserProfile implements Tool
 {
     public function __construct(
         protected CoachContext $context
-    ) {
-        $this
-            ->as('get_user_profile')
-            ->for('Get the current user\'s skills, levels, distribution, and recent activity')
-            ->using($this);
+    ) {}
+
+    public function description(): string
+    {
+        return "Get the current user's skills, levels, distribution, and recent activity";
     }
 
-    public function __invoke(): string
+    public function schema(JsonSchema $schema): array
+    {
+        return [];
+    }
+
+    public function handle(Request $request): string
     {
         $user = $this->context->getUserOrFail();
         $user->load(['skills', 'skillHistory' => fn ($q) => $q->with('skill')->limit(10)]);

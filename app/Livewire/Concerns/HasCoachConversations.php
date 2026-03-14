@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Concerns;
 
-use App\Models\CoachConversation;
+use App\Models\AgentConversation;
 use Livewire\Attributes\On;
 
 trait HasCoachConversations
@@ -10,10 +10,9 @@ trait HasCoachConversations
     // Components using this trait must define these properties:
     // protected string $exportPrefix = 'coach-chat-';
     // protected string $exportTitle = 'Skills Coach Conversation';
-    // protected array $exportEagerLoads = ['messages'];
 
     #[On('conversation-selected')]
-    public function switchConversation(int $conversationId): void
+    public function switchConversation(string $conversationId): void
     {
         $this->conversationId = $conversationId;
         $this->loadConversation();
@@ -32,8 +31,8 @@ trait HasCoachConversations
             return null;
         }
 
-        $conversation = auth()->user()->coachConversations()
-            ->with($this->exportEagerLoads)
+        $conversation = auth()->user()->agentConversations()
+            ->with('messages')
             ->findOrFail($this->conversationId);
 
         $filename = $this->exportPrefix.$conversation->created_at->format('Y-m-d');
@@ -45,7 +44,7 @@ trait HasCoachConversations
         return $this->exportAsMarkdown($conversation, $filename);
     }
 
-    protected function exportAsJson(CoachConversation $conversation, string $filename): mixed
+    protected function exportAsJson(AgentConversation $conversation, string $filename): mixed
     {
         $data = [
             'exported_at' => now()->toIso8601String(),
@@ -57,25 +56,27 @@ trait HasCoachConversations
         }, $filename.'.json', ['Content-Type' => 'application/json']);
     }
 
-    protected function getJsonConversationData(CoachConversation $conversation): array
+    protected function getJsonConversationData(AgentConversation $conversation): array
     {
         return [
             'id' => $conversation->id,
             'created_at' => $conversation->created_at->toIso8601String(),
-            'messages' => $conversation->messages->map(fn ($m) => [
-                'role' => $m->role->value,
-                'content' => $m->content,
-                'created_at' => $m->created_at->toIso8601String(),
-            ])->toArray(),
+            'messages' => $conversation->messages
+                ->whereIn('role', ['user', 'assistant'])
+                ->map(fn ($m) => [
+                    'role' => $m->role,
+                    'content' => $m->content,
+                    'created_at' => $m->created_at->toIso8601String(),
+                ])->values()->toArray(),
         ];
     }
 
-    protected function exportAsMarkdown(CoachConversation $conversation, string $filename): mixed
+    protected function exportAsMarkdown(AgentConversation $conversation, string $filename): mixed
     {
         $content = $this->getMarkdownHeader($conversation);
 
-        foreach ($conversation->messages as $message) {
-            $speaker = $message->role->value === 'user' ? '**You**' : '**Coach**';
+        foreach ($conversation->messages->whereIn('role', ['user', 'assistant']) as $message) {
+            $speaker = $message->role === 'user' ? '**You**' : '**Coach**';
             $content .= $speaker.' ('.$message->created_at->format('g:ia')."):\n\n";
             $content .= $message->content."\n\n";
         }
@@ -85,7 +86,7 @@ trait HasCoachConversations
         }, $filename.'.md', ['Content-Type' => 'text/markdown']);
     }
 
-    protected function getMarkdownHeader(CoachConversation $conversation): string
+    protected function getMarkdownHeader(AgentConversation $conversation): string
     {
         return "# {$this->exportTitle}\n\n"
             .'Exported: '.now()->format('F j, Y g:ia')."\n"

@@ -2,10 +2,10 @@
 
 namespace App\Livewire;
 
-use App\Enums\CoachMode;
+use App\Ai\Agents\PersonalCoachAgent;
 use App\Livewire\Concerns\HasCoachConversations;
-use App\Models\CoachConversation;
-use App\Services\SkillsCoach\CoachService;
+use App\Models\AgentConversation;
+use App\Services\SkillsCoach\CoachContext;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -21,27 +21,23 @@ class SkillsCoach extends Component
 
     protected string $exportTitle = 'Skills Coach Conversation';
 
-    protected array $exportEagerLoads = ['messages'];
-
     public array $messages = [];
 
-    public ?int $conversationId = null;
+    public ?string $conversationId = null;
 
     public function mount(): void
     {
         $this->loadConversation();
     }
 
-    public function send(CoachService $coach): void
+    public function send(CoachContext $context): void
     {
         $this->validate([
             'prompt' => ['required', 'string', 'max:1000'],
         ]);
 
         $user = auth()->user();
-        $conversation = $this->conversationId
-            ? CoachConversation::find($this->conversationId)
-            : null;
+        $context->setUser($user);
 
         // Add user message to UI immediately
         $this->messages[] = [
@@ -54,16 +50,18 @@ class SkillsCoach extends Component
         $prompt = $this->prompt;
         $this->reset('prompt');
 
-        // Get response from coach (this persists both messages)
-        $response = $coach->chat($user, $prompt, $conversation);
+        $agent = PersonalCoachAgent::make();
 
-        // Update conversation ID if this was a new conversation
-        $this->conversationId = $response->conversation->id;
+        $response = $this->conversationId
+            ? $agent->continue($this->conversationId, as: $user)->prompt($prompt)
+            : $agent->forUser($user)->prompt($prompt);
+
+        $this->conversationId = $response->conversationId;
 
         // Add assistant response to UI
         $this->messages[] = [
             'role' => 'assistant',
-            'content' => $response->content,
+            'content' => $response->text,
         ];
 
         $this->dispatch('message-received');
@@ -71,11 +69,7 @@ class SkillsCoach extends Component
 
     public function clearChat(): void
     {
-        $user = auth()->user();
-        $conversation = $user->coachConversations()->create([
-            'mode' => CoachMode::Personal,
-        ]);
-        $this->conversationId = $conversation->id;
+        $this->conversationId = null;
         $this->reset('messages');
     }
 
@@ -84,16 +78,20 @@ class SkillsCoach extends Component
         $user = auth()->user();
 
         $conversation = $this->conversationId
-            ? $user->coachConversations()->find($this->conversationId)
-            : $user->coachConversations()->personal()->first();
+            ? $user->agentConversations()->find($this->conversationId)
+            : AgentConversation::where('user_id', $user->id)
+                ->forAgent(PersonalCoachAgent::class)
+                ->latest()
+                ->first();
 
         if ($conversation) {
             $this->conversationId = $conversation->id;
             $this->messages = $conversation->messages()
+                ->whereIn('role', ['user', 'assistant'])
                 ->oldest()
                 ->get()
                 ->map(fn ($m) => [
-                    'role' => $m->role->value,
+                    'role' => $m->role,
                     'content' => $m->content,
                 ])
                 ->toArray();

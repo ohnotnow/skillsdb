@@ -1,13 +1,40 @@
 <?php
 
-use App\Enums\CoachMessageRole;
+use App\Ai\Agents\PersonalCoachAgent;
 use App\Livewire\SkillsCoach;
-use App\Models\CoachConversation;
-use App\Models\CoachMessage;
+use App\Models\AgentConversation;
+use App\Models\AgentConversationMessage;
 use App\Models\User;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
-use Prism\Prism\Facades\Prism;
-use Prism\Prism\Testing\TextResponseFake;
+
+function createTestConversation(User $user, array $messages = []): AgentConversation
+{
+    $conversation = AgentConversation::create([
+        'id' => (string) Str::uuid7(),
+        'user_id' => $user->id,
+        'title' => 'Test conversation',
+    ]);
+
+    foreach ($messages as $message) {
+        AgentConversationMessage::create([
+            'id' => (string) Str::uuid7(),
+            'conversation_id' => $conversation->id,
+            'user_id' => $user->id,
+            'agent' => PersonalCoachAgent::class,
+            'role' => $message['role'],
+            'content' => $message['content'],
+            'meta' => '[]',
+            'attachments' => '[]',
+            'tool_calls' => '[]',
+            'tool_results' => '[]',
+            'usage' => '[]',
+        ]);
+    }
+
+    return $conversation;
+}
 
 it('can view the skills coach page', function () {
     $user = User::factory()->create();
@@ -35,8 +62,8 @@ it('displays welcome message when no messages exist', function () {
 it('can send a message and receive a response', function () {
     $user = User::factory()->create();
 
-    Prism::fake([
-        TextResponseFake::make()->withText('I recommend learning Docker next.'),
+    PersonalCoachAgent::fake([
+        'I recommend learning Docker next.',
     ]);
 
     Livewire::actingAs($user)
@@ -51,8 +78,8 @@ it('can send a message and receive a response', function () {
 it('persists messages to the database', function () {
     $user = User::factory()->create();
 
-    Prism::fake([
-        TextResponseFake::make()->withText('Great question about Python!'),
+    PersonalCoachAgent::fake([
+        'Great question about Python!',
     ]);
 
     Livewire::actingAs($user)
@@ -60,22 +87,15 @@ it('persists messages to the database', function () {
         ->set('prompt', 'Tell me about Python')
         ->call('send');
 
-    expect(CoachConversation::where('user_id', $user->id)->count())->toBe(1);
-    expect(CoachMessage::count())->toBe(2); // User message + assistant response
+    expect(AgentConversation::where('user_id', $user->id)->count())->toBe(1);
+    expect(AgentConversationMessage::count())->toBe(2); // User message + assistant response
 });
 
 it('loads existing conversation on mount', function () {
     $user = User::factory()->create();
-    $conversation = CoachConversation::factory()->create(['user_id' => $user->id]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $conversation->id,
-        'role' => CoachMessageRole::User,
-        'content' => 'Previous question',
-    ]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $conversation->id,
-        'role' => CoachMessageRole::Assistant,
-        'content' => 'Previous answer',
+    $conversation = createTestConversation($user, [
+        ['role' => 'user', 'content' => 'Previous question'],
+        ['role' => 'assistant', 'content' => 'Previous answer'],
     ]);
 
     Livewire::actingAs($user)
@@ -107,8 +127,8 @@ it('validates that prompt is not too long', function () {
 it('can clear chat and start new conversation', function () {
     $user = User::factory()->create();
 
-    Prism::fake([
-        TextResponseFake::make()->withText('Test response'),
+    PersonalCoachAgent::fake([
+        'Test response',
     ]);
 
     $component = Livewire::actingAs($user)
@@ -123,9 +143,8 @@ it('can clear chat and start new conversation', function () {
         ->assertSet('messages', [])
         ->assertSee('your Skills Coach');
 
-    // Should have created a new conversation
-    expect($component->get('conversationId'))->not->toBe($originalConversationId);
-    expect(CoachConversation::where('user_id', $user->id)->count())->toBe(2);
+    // conversationId should be null after clearing
+    expect($component->get('conversationId'))->toBeNull();
 });
 
 it('shows homepage link with skills coach button', function () {
@@ -140,18 +159,12 @@ it('shows homepage link with skills coach button', function () {
 it('can switch to a different conversation', function () {
     $user = User::factory()->create();
 
-    $conversation1 = CoachConversation::factory()->create(['user_id' => $user->id]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $conversation1->id,
-        'role' => CoachMessageRole::User,
-        'content' => 'First conversation message',
+    $conversation1 = createTestConversation($user, [
+        ['role' => 'user', 'content' => 'First conversation message'],
     ]);
 
-    $conversation2 = CoachConversation::factory()->create(['user_id' => $user->id]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $conversation2->id,
-        'role' => CoachMessageRole::User,
-        'content' => 'Second conversation message',
+    $conversation2 = createTestConversation($user, [
+        ['role' => 'user', 'content' => 'Second conversation message'],
     ]);
 
     // Start with conversation1 loaded, then switch to conversation2
@@ -174,30 +187,26 @@ it('can switch to a different conversation', function () {
 
 it('can export conversation as json', function () {
     $user = User::factory()->create();
-    $conversation = CoachConversation::factory()->create(['user_id' => $user->id]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $conversation->id,
-        'role' => CoachMessageRole::User,
-        'content' => 'Test question',
+    $conversation = createTestConversation($user, [
+        ['role' => 'user', 'content' => 'Test question'],
     ]);
 
     Livewire::actingAs($user)
         ->test(SkillsCoach::class)
+        ->set('conversationId', $conversation->id)
         ->call('exportConversation', 'json')
         ->assertFileDownloaded('coach-chat-'.$conversation->created_at->format('Y-m-d').'.json');
 });
 
 it('can export conversation as markdown', function () {
     $user = User::factory()->create();
-    $conversation = CoachConversation::factory()->create(['user_id' => $user->id]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $conversation->id,
-        'role' => CoachMessageRole::User,
-        'content' => 'Test question',
+    $conversation = createTestConversation($user, [
+        ['role' => 'user', 'content' => 'Test question'],
     ]);
 
     Livewire::actingAs($user)
         ->test(SkillsCoach::class)
+        ->set('conversationId', $conversation->id)
         ->call('exportConversation', 'markdown')
         ->assertFileDownloaded('coach-chat-'.$conversation->created_at->format('Y-m-d').'.md');
 });
@@ -215,10 +224,12 @@ it('returns null when exporting with no active conversation', function () {
 it('cannot export another users conversation', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
-    $otherConversation = CoachConversation::factory()->create(['user_id' => $otherUser->id]);
+    $otherConversation = createTestConversation($otherUser, [
+        ['role' => 'user', 'content' => 'Secret question'],
+    ]);
 
     Livewire::actingAs($user)
         ->test(SkillsCoach::class)
         ->set('conversationId', $otherConversation->id)
         ->call('exportConversation', 'json');
-})->throws(Illuminate\Database\Eloquent\ModelNotFoundException::class);
+})->throws(ModelNotFoundException::class);

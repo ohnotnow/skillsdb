@@ -1,29 +1,39 @@
 <?php
 
-namespace App\Services\SkillsCoach\TeamTools;
+namespace App\Ai\Tools\TeamTools;
 
 use App\Enums\SkillLevel;
 use App\Models\Skill;
 use App\Services\SkillsCoach\CoachContext;
-use Prism\Prism\Tool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Tools\Request;
 
-class SuggestTraining extends Tool
+class SuggestTraining implements Tool
 {
     use HandlesContactability;
 
     public function __construct(
         protected CoachContext $context
-    ) {
-        $this
-            ->as('suggest_training')
-            ->for('When human mentoring is not available - suggest external training approaches. This is a LAST RESORT - always check for internal experts first. A checkbox course is not the same as learning from someone experienced.')
-            ->withStringParameter('skill_name', 'The skill that needs training (required)')
-            ->withStringParameter('for_person', 'Who needs the training (optional)')
-            ->using($this);
+    ) {}
+
+    public function description(): string
+    {
+        return 'When human mentoring is not available - suggest external training approaches. This is a LAST RESORT - always check for internal experts first. A checkbox course is not the same as learning from someone experienced.';
     }
 
-    public function __invoke(string $skill_name, ?string $for_person = null): string
+    public function schema(JsonSchema $schema): array
     {
+        return [
+            'skill_name' => $schema->string()->required(),
+            'for_person' => $schema->string(),
+        ];
+    }
+
+    public function handle(Request $request): string
+    {
+        $skill_name = $request['skill_name'];
+        $for_person = $request['for_person'] ?? null;
         $team = $this->context->getTeam();
 
         if (! $team) {

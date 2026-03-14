@@ -1,27 +1,36 @@
 <?php
 
-namespace App\Services\SkillsCoach\Tools;
+namespace App\Ai\Tools\PersonalTools;
 
 use App\Enums\SkillLevel;
 use App\Models\Skill;
 use App\Models\User;
 use App\Services\SkillsCoach\CoachContext;
-use Prism\Prism\Tool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Tools\Request;
 
-class FindExperts extends Tool
+class FindExperts implements Tool
 {
     public function __construct(
         protected CoachContext $context
-    ) {
-        $this
-            ->as('find_experts')
-            ->for('Find colleagues with High proficiency in a skill who can mentor or help')
-            ->withStringParameter('skill_name', 'The name of the skill to find experts for')
-            ->using($this);
+    ) {}
+
+    public function description(): string
+    {
+        return 'Find colleagues with High proficiency in a skill who can mentor or help';
     }
 
-    public function __invoke(string $skill_name): string
+    public function schema(JsonSchema $schema): array
     {
+        return [
+            'skill_name' => $schema->string()->required(),
+        ];
+    }
+
+    public function handle(Request $request): string
+    {
+        $skill_name = $request['skill_name'];
         $currentUser = $this->context->getUserOrFail();
 
         $skill = Skill::where('name', 'like', "%{$skill_name}%")

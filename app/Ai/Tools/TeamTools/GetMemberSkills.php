@@ -1,28 +1,37 @@
 <?php
 
-namespace App\Services\SkillsCoach\TeamTools;
+namespace App\Ai\Tools\TeamTools;
 
 use App\Enums\SkillHistoryEvent;
 use App\Enums\SkillLevel;
 use App\Services\SkillsCoach\CoachContext;
-use Prism\Prism\Tool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Tools\Request;
 
-class GetMemberSkills extends Tool
+class GetMemberSkills implements Tool
 {
     use HandlesContactability;
 
     public function __construct(
         protected CoachContext $context
-    ) {
-        $this
-            ->as('get_member_skills')
-            ->for('Deep dive into a specific person - what they know, what they are learning, how they are developing. Answers: "Tell me about Sally" or "What does Jim know?"')
-            ->withStringParameter('person_name', 'The name of the person to look up (required)')
-            ->using($this);
+    ) {}
+
+    public function description(): string
+    {
+        return 'Deep dive into a specific person - what they know, what they are learning, how they are developing. Answers: "Tell me about Sally" or "What does Jim know?"';
     }
 
-    public function __invoke(string $person_name): string
+    public function schema(JsonSchema $schema): array
     {
+        return [
+            'person_name' => $schema->string()->required(),
+        ];
+    }
+
+    public function handle(Request $request): string
+    {
+        $person_name = $request['person_name'];
         $team = $this->context->getTeam();
 
         if (! $team) {

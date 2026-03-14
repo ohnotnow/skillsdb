@@ -1,5 +1,13 @@
 <?php
 
+use App\Ai\Tools\PersonalTools\FindExperts;
+use App\Ai\Tools\PersonalTools\FindSkillSharers;
+use App\Ai\Tools\PersonalTools\GetSkillJourney;
+use App\Ai\Tools\PersonalTools\GetTeamGaps;
+use App\Ai\Tools\PersonalTools\GetTrendingSkills;
+use App\Ai\Tools\PersonalTools\GetUserProfile;
+use App\Ai\Tools\PersonalTools\GetUserProgress;
+use App\Ai\Tools\PersonalTools\SearchByCategory;
 use App\Enums\SkillHistoryEvent;
 use App\Enums\SkillLevel;
 use App\Models\Skill;
@@ -8,14 +16,7 @@ use App\Models\SkillHistory;
 use App\Models\SkillUser;
 use App\Models\User;
 use App\Services\SkillsCoach\CoachContext;
-use App\Services\SkillsCoach\Tools\FindExperts;
-use App\Services\SkillsCoach\Tools\FindSkillSharers;
-use App\Services\SkillsCoach\Tools\GetSkillJourney;
-use App\Services\SkillsCoach\Tools\GetTeamGaps;
-use App\Services\SkillsCoach\Tools\GetTrendingSkills;
-use App\Services\SkillsCoach\Tools\GetUserProfile;
-use App\Services\SkillsCoach\Tools\GetUserProgress;
-use App\Services\SkillsCoach\Tools\SearchByCategory;
+use Laravel\Ai\Tools\Request;
 
 beforeEach(function () {
     $this->context = app(CoachContext::class);
@@ -32,7 +33,7 @@ describe('FindExperts', function () {
 
         $this->context->setUser($currentUser);
         $tool = app(FindExperts::class);
-        $result = json_decode($tool('Docker'), true);
+        $result = json_decode($tool->handle(new Request(['skill_name' => 'Docker'])), true);
 
         expect($result['skill'])->toBe('Docker');
         expect($result['count'])->toBe(1);
@@ -51,7 +52,7 @@ describe('FindExperts', function () {
 
         $this->context->setUser($currentUser);
         $tool = app(FindExperts::class);
-        $result = json_decode($tool('Kubernetes'), true);
+        $result = json_decode($tool->handle(new Request(['skill_name' => 'Kubernetes'])), true);
 
         expect($result['count'])->toBe(1);
         expect($result['experts'][0]['name'])->toBe($expertOptedIn->full_name);
@@ -66,7 +67,7 @@ describe('FindExperts', function () {
 
         $this->context->setUser($currentUser);
         $tool = app(FindExperts::class);
-        $result = json_decode($tool('Python'), true);
+        $result = json_decode($tool->handle(new Request(['skill_name' => 'Python'])), true);
 
         expect($result['count'])->toBe(0);
     });
@@ -76,7 +77,7 @@ describe('FindExperts', function () {
 
         $this->context->setUser($currentUser);
         $tool = app(FindExperts::class);
-        $result = json_decode($tool('NonexistentSkill'), true);
+        $result = json_decode($tool->handle(new Request(['skill_name' => 'NonexistentSkill'])), true);
 
         expect($result['found'])->toBeFalse();
         expect($result['message'])->toContain('NonexistentSkill');
@@ -99,7 +100,7 @@ describe('FindSkillSharers', function () {
 
         $this->context->setUser($currentUser);
         $tool = app(FindSkillSharers::class);
-        $result = json_decode($tool('Laravel'), true);
+        $result = json_decode($tool->handle(new Request(['skill_name' => 'Laravel'])), true);
 
         expect($result['count'])->toBe(3);
         // Should be sorted by level (High first)
@@ -119,7 +120,7 @@ describe('FindSkillSharers', function () {
 
         $this->context->setUser($currentUser);
         $tool = app(FindSkillSharers::class);
-        $result = json_decode($tool('Vue'), true);
+        $result = json_decode($tool->handle(new Request(['skill_name' => 'Vue'])), true);
 
         expect($result['count'])->toBe(1);
     });
@@ -137,7 +138,7 @@ describe('GetUserProfile', function () {
 
         $this->context->setUser($user);
         $tool = app(GetUserProfile::class);
-        $result = json_decode($tool(), true);
+        $result = json_decode($tool->handle(new Request), true);
 
         expect($result['name'])->toBe($user->full_name);
         expect($result['total_skills'])->toBe(3);
@@ -169,7 +170,7 @@ describe('GetTrendingSkills', function () {
 
         $this->context->setUser($user);
         $tool = app(GetTrendingSkills::class);
-        $result = json_decode($tool(), true);
+        $result = json_decode($tool->handle(new Request), true);
 
         expect($result['count'])->toBe(1);
         expect($result['trending'][0]['name'])->toBe('Kubernetes');
@@ -193,7 +194,7 @@ describe('GetTrendingSkills', function () {
 
         $this->context->setUser($users->first());
         $tool = app(GetTrendingSkills::class);
-        $result = json_decode($tool(limit: 2), true);
+        $result = json_decode($tool->handle(new Request(['limit' => 2])), true);
 
         expect($result['count'])->toBe(2);
     });
@@ -218,7 +219,7 @@ describe('GetTeamGaps', function () {
 
         $this->context->setUser($admin);
         $tool = app(GetTeamGaps::class);
-        $result = json_decode($tool(), true);
+        $result = json_decode($tool->handle(new Request), true);
 
         $gapNames = collect($result['thin_coverage'])->pluck('name')->toArray();
         expect($gapNames)->toContain('Terraform');
@@ -232,7 +233,7 @@ describe('GetTeamGaps', function () {
 
         $this->context->setUser($admin);
         $tool = app(GetTeamGaps::class);
-        $result = json_decode($tool(), true);
+        $result = json_decode($tool->handle(new Request), true);
 
         $noCoverageNames = collect($result['no_coverage'])->pluck('name')->toArray();
         expect($noCoverageNames)->toContain('Obscure Language');
@@ -256,7 +257,7 @@ describe('GetSkillJourney', function () {
 
         $this->context->setUser($user);
         $tool = app(GetSkillJourney::class);
-        $result = json_decode($tool('Docker'), true);
+        $result = json_decode($tool->handle(new Request(['skill_name' => 'Docker'])), true);
 
         expect($result['skill'])->toBe('Docker');
         expect($result['current_level'])->toBe('Medium');
@@ -270,7 +271,7 @@ describe('GetSkillJourney', function () {
 
         $this->context->setUser($user);
         $tool = app(GetSkillJourney::class);
-        $result = json_decode($tool('NonexistentSkill'), true);
+        $result = json_decode($tool->handle(new Request(['skill_name' => 'NonexistentSkill'])), true);
 
         expect($result['found'])->toBeFalse();
         expect($result['message'])->toContain('NonexistentSkill');
@@ -303,7 +304,7 @@ describe('GetUserProgress', function () {
 
         $this->context->setUser($user);
         $tool = app(GetUserProgress::class);
-        $result = json_decode($tool(months: 6), true);
+        $result = json_decode($tool->handle(new Request(['months' => 6])), true);
 
         expect($result['user'])->toBe($user->full_name);
         expect($result['months_analysed'])->toBe(6);
@@ -327,7 +328,7 @@ describe('SearchByCategory', function () {
 
         $this->context->setUser($currentUser);
         $tool = app(SearchByCategory::class);
-        $result = json_decode($tool('Infrastructure'), true);
+        $result = json_decode($tool->handle(new Request(['category_name' => 'Infrastructure'])), true);
 
         expect($result['category'])->toBe('Infrastructure');
         expect($result['count'])->toBe(1);
@@ -352,7 +353,7 @@ describe('SearchByCategory', function () {
 
         $this->context->setUser($currentUser);
         $tool = app(SearchByCategory::class);
-        $result = json_decode($tool('Development'), true);
+        $result = json_decode($tool->handle(new Request(['category_name' => 'Development'])), true);
 
         expect($result['count'])->toBe(1);
         expect($result['people'][0]['name'])->toBe($contactable->full_name);
@@ -365,7 +366,7 @@ describe('SearchByCategory', function () {
 
         $this->context->setUser($currentUser);
         $tool = app(SearchByCategory::class);
-        $result = json_decode($tool('NonexistentCategory'), true);
+        $result = json_decode($tool->handle(new Request(['category_name' => 'NonexistentCategory'])), true);
 
         expect($result['found'])->toBeFalse();
         expect($result['available_categories'])->toContain('Infrastructure');

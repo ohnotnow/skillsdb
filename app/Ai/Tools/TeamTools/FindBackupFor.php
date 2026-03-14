@@ -1,29 +1,39 @@
 <?php
 
-namespace App\Services\SkillsCoach\TeamTools;
+namespace App\Ai\Tools\TeamTools;
 
 use App\Enums\SkillLevel;
 use App\Models\Skill;
 use App\Services\SkillsCoach\CoachContext;
-use Prism\Prism\Tool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Tools\Request;
 
-class FindBackupFor extends Tool
+class FindBackupFor implements Tool
 {
     use HandlesContactability;
 
     public function __construct(
         protected CoachContext $context
-    ) {
-        $this
-            ->as('find_backup_for')
-            ->for('Find who can cover for a person (if they are away/leaving) or who knows a specific skill. Answers: "If Jim is away, who covers?" or "Who knows Kubernetes?"')
-            ->withStringParameter('person_name', 'Name of the person to find backup for (optional)')
-            ->withStringParameter('skill_name', 'Name of the skill to find coverage for (optional)')
-            ->using($this);
+    ) {}
+
+    public function description(): string
+    {
+        return 'Find who can cover for a person (if they are away/leaving) or who knows a specific skill. Answers: "If Jim is away, who covers?" or "Who knows Kubernetes?"';
     }
 
-    public function __invoke(?string $person_name = null, ?string $skill_name = null): string
+    public function schema(JsonSchema $schema): array
     {
+        return [
+            'person_name' => $schema->string(),
+            'skill_name' => $schema->string(),
+        ];
+    }
+
+    public function handle(Request $request): string
+    {
+        $person_name = $request['person_name'] ?? null;
+        $skill_name = $request['skill_name'] ?? null;
         $team = $this->context->getTeam();
 
         if (! $team) {

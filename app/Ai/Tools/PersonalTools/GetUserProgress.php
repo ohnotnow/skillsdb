@@ -1,24 +1,33 @@
 <?php
 
-namespace App\Services\SkillsCoach\Tools;
+namespace App\Ai\Tools\PersonalTools;
 
 use App\Services\SkillsCoach\CoachContext;
-use Prism\Prism\Tool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Tools\Request;
 
-class GetUserProgress extends Tool
+class GetUserProgress implements Tool
 {
     public function __construct(
         protected CoachContext $context
-    ) {
-        $this
-            ->as('get_user_progress')
-            ->for('Get the current user\'s skill progress over time - useful for understanding momentum')
-            ->withNumberParameter('months', 'Number of months to look back (default 6)')
-            ->using($this);
+    ) {}
+
+    public function description(): string
+    {
+        return "Get the current user's skill progress over time - useful for understanding momentum";
     }
 
-    public function __invoke(int $months = 6): string
+    public function schema(JsonSchema $schema): array
     {
+        return [
+            'months' => $schema->integer()->min(1)->max(24),
+        ];
+    }
+
+    public function handle(Request $request): string
+    {
+        $months = $request['months'] ?? 6;
         $user = $this->context->getUserOrFail();
 
         $progress = $user->getSkillsOverTimeFromHistory($months);

@@ -1,27 +1,34 @@
 <?php
 
-namespace App\Services\SkillsCoach\TeamTools;
+namespace App\Ai\Tools\TeamTools;
 
 use App\Enums\SkillHistoryEvent;
 use App\Enums\SkillLevel;
 use App\Models\SkillHistory;
 use App\Services\SkillsCoach\CoachContext;
-use Prism\Prism\Tool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Tools\Request;
 
-class GetTeamOverview extends Tool
+class GetTeamOverview implements Tool
 {
     use HandlesContactability;
 
     public function __construct(
         protected CoachContext $context
-    ) {
-        $this
-            ->as('get_team_overview')
-            ->for('Get a high-level picture of the actual humans in the team: who they are, what they know, what they are learning')
-            ->using($this);
+    ) {}
+
+    public function description(): string
+    {
+        return 'Get a high-level picture of the actual humans in the team: who they are, what they know, what they are learning';
     }
 
-    public function __invoke(): string
+    public function schema(JsonSchema $schema): array
+    {
+        return [];
+    }
+
+    public function handle(Request $request): string
     {
         $team = $this->context->getTeam();
 

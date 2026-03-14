@@ -1,31 +1,42 @@
 <?php
 
-namespace App\Services\SkillsCoach\TeamTools;
+namespace App\Ai\Tools\TeamTools;
 
 use App\Enums\SkillHistoryEvent;
 use App\Enums\SkillLevel;
 use App\Models\Skill;
 use App\Services\SkillsCoach\CoachContext;
-use Prism\Prism\Tool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Tools\Request;
 
-class FindMentoringPairs extends Tool
+class FindMentoringPairs implements Tool
 {
     use HandlesContactability;
 
     public function __construct(
         protected CoachContext $context
-    ) {
-        $this
-            ->as('find_mentoring_pairs')
-            ->for('Find who could teach whom. Connect High-level experts with people who want to learn. The heart of the coach - people helping people.')
-            ->withStringParameter('skill_name', 'Find mentoring pairs for this skill (optional)')
-            ->withStringParameter('mentee_name', 'Find mentors for this person (optional)')
-            ->withStringParameter('mentor_name', 'Find who this person could mentor (optional)')
-            ->using($this);
+    ) {}
+
+    public function description(): string
+    {
+        return 'Find who could teach whom. Connect High-level experts with people who want to learn. The heart of the coach - people helping people.';
     }
 
-    public function __invoke(?string $skill_name = null, ?string $mentee_name = null, ?string $mentor_name = null): string
+    public function schema(JsonSchema $schema): array
     {
+        return [
+            'skill_name' => $schema->string(),
+            'mentee_name' => $schema->string(),
+            'mentor_name' => $schema->string(),
+        ];
+    }
+
+    public function handle(Request $request): string
+    {
+        $skill_name = $request['skill_name'] ?? null;
+        $mentee_name = $request['mentee_name'] ?? null;
+        $mentor_name = $request['mentor_name'] ?? null;
         $team = $this->context->getTeam();
 
         if (! $team) {

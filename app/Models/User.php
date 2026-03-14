@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\SkillHistoryEvent;
 use App\Enums\SkillLevel;
+use Carbon\Carbon;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -15,7 +17,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
@@ -62,9 +64,9 @@ class User extends Authenticatable
         return $this->hasMany(SkillHistory::class)->latest('id');
     }
 
-    public function coachConversations(): HasMany
+    public function agentConversations(): HasMany
     {
-        return $this->hasMany(CoachConversation::class)->latest();
+        return $this->hasMany(AgentConversation::class)->latest('updated_at');
     }
 
     public function trainingCourses(): BelongsToMany
@@ -137,7 +139,7 @@ class User extends Authenticatable
     /**
      * Get a user's skill level at a specific point in time by replaying history.
      */
-    public function getSkillLevelAt(Skill $skill, \Carbon\Carbon $date): ?SkillLevel
+    public function getSkillLevelAt(Skill $skill, Carbon $date): ?SkillLevel
     {
         $latestEvent = SkillHistory::where('user_id', $this->id)
             ->where('skill_id', $skill->id)

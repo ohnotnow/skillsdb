@@ -1,26 +1,35 @@
 <?php
 
-namespace App\Services\SkillsCoach\Tools;
+namespace App\Ai\Tools\PersonalTools;
 
 use App\Models\Skill;
 use App\Models\User;
 use App\Services\SkillsCoach\CoachContext;
-use Prism\Prism\Tool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Tools\Request;
 
-class FindSkillSharers extends Tool
+class FindSkillSharers implements Tool
 {
     public function __construct(
         protected CoachContext $context
-    ) {
-        $this
-            ->as('find_skill_sharers')
-            ->for('Find colleagues at any level who share a skill - potential study buddies or peers')
-            ->withStringParameter('skill_name', 'The name of the skill to find sharers for')
-            ->using($this);
+    ) {}
+
+    public function description(): string
+    {
+        return 'Find colleagues at any level who share a skill - potential study buddies or peers';
     }
 
-    public function __invoke(string $skill_name): string
+    public function schema(JsonSchema $schema): array
     {
+        return [
+            'skill_name' => $schema->string()->required(),
+        ];
+    }
+
+    public function handle(Request $request): string
+    {
+        $skill_name = $request['skill_name'];
         $currentUser = $this->context->getUserOrFail();
 
         $skill = Skill::where('name', 'like', "%{$skill_name}%")

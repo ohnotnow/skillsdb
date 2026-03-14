@@ -1,26 +1,36 @@
 <?php
 
-namespace App\Services\SkillsCoach\Tools;
+namespace App\Ai\Tools\PersonalTools;
 
+use App\Enums\SkillLevel;
 use App\Models\Skill;
 use App\Models\SkillHistory;
 use App\Services\SkillsCoach\CoachContext;
-use Prism\Prism\Tool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Tools\Request;
 
-class GetSkillJourney extends Tool
+class GetSkillJourney implements Tool
 {
     public function __construct(
         protected CoachContext $context
-    ) {
-        $this
-            ->as('get_skill_journey')
-            ->for('Get the full history of the current user\'s journey with a specific skill')
-            ->withStringParameter('skill_name', 'The name of the skill to get journey for')
-            ->using($this);
+    ) {}
+
+    public function description(): string
+    {
+        return "Get the full history of the current user's journey with a specific skill";
     }
 
-    public function __invoke(string $skill_name): string
+    public function schema(JsonSchema $schema): array
     {
+        return [
+            'skill_name' => $schema->string()->required(),
+        ];
+    }
+
+    public function handle(Request $request): string
+    {
+        $skill_name = $request['skill_name'];
         $user = $this->context->getUserOrFail();
 
         $skill = Skill::where('name', 'like', "%{$skill_name}%")->first();
@@ -38,8 +48,8 @@ class GetSkillJourney extends Tool
             ->get()
             ->map(fn ($h) => [
                 'event' => $h->event_type->label(),
-                'old_level' => $h->old_level ? \App\Enums\SkillLevel::from($h->old_level)->label() : null,
-                'new_level' => $h->new_level ? \App\Enums\SkillLevel::from($h->new_level)->label() : null,
+                'old_level' => $h->old_level ? SkillLevel::from($h->old_level)->label() : null,
+                'new_level' => $h->new_level ? SkillLevel::from($h->new_level)->label() : null,
                 'date' => $h->created_at->format('j M Y'),
                 'ago' => $h->created_at->diffForHumans(),
             ])

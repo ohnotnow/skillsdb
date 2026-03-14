@@ -1,23 +1,30 @@
 <?php
 
-namespace App\Services\SkillsCoach\Tools;
+namespace App\Ai\Tools\PersonalTools;
 
 use App\Models\Skill;
-use Prism\Prism\Tool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Tools\Request;
 
-class GetTeamGaps extends Tool
+class GetTeamGaps implements Tool
 {
-    public function __construct()
+    public function description(): string
     {
-        $this
-            ->as('get_team_gaps')
-            ->for('Find skills where the team has thin coverage - opportunities for someone to become valuable')
-            ->withNumberParameter('max_users', 'Maximum number of users with the skill to be considered a gap (default 2)')
-            ->using($this);
+        return 'Find skills where the team has thin coverage - opportunities for someone to become valuable';
     }
 
-    public function __invoke(int $max_users = 2): string
+    public function schema(JsonSchema $schema): array
     {
+        return [
+            'max_users' => $schema->integer()->min(1)->max(10),
+        ];
+    }
+
+    public function handle(Request $request): string
+    {
+        $max_users = $request['max_users'] ?? 2;
+
         $allSkills = Skill::approved()->withCount('users')->get();
 
         $gaps = $allSkills

@@ -1,22 +1,40 @@
 <?php
 
-use App\Enums\CoachMessageRole;
+use App\Ai\Agents\PersonalCoachAgent;
+use App\Ai\Agents\TeamCoachAgent;
 use App\Enums\CoachMode;
 use App\Livewire\ConversationHistory;
-use App\Models\CoachConversation;
-use App\Models\CoachMessage;
+use App\Models\AgentConversation;
+use App\Models\AgentConversationMessage;
 use App\Models\Team;
 use App\Models\User;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
+
+function createConversationWithMessage(User $user, string $content, string $agentClass = PersonalCoachAgent::class, ?int $teamId = null): AgentConversation
+{
+    $conversation = AgentConversation::create([
+        'id' => (string) Str::uuid7(),
+        'user_id' => $user->id,
+        'title' => Str::limit($content, 100),
+    ]);
+
+    AgentConversationMessage::create([
+        'id' => (string) Str::uuid7(),
+        'conversation_id' => $conversation->id,
+        'user_id' => $user->id,
+        'agent' => $agentClass,
+        'role' => 'user',
+        'content' => $content,
+        'meta' => $teamId ? ['team_id' => $teamId] : [],
+    ]);
+
+    return $conversation;
+}
 
 it('displays the users personal conversations', function () {
     $user = User::factory()->create();
-    $conversation = CoachConversation::factory()->create(['user_id' => $user->id]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $conversation->id,
-        'role' => CoachMessageRole::User,
-        'content' => 'My first message',
-    ]);
+    createConversationWithMessage($user, 'My first message');
 
     Livewire::actingAs($user)
         ->test(ConversationHistory::class, ['mode' => CoachMode::Personal])
@@ -27,12 +45,7 @@ it('does not show other users conversations', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
 
-    $conversation = CoachConversation::factory()->create(['user_id' => $otherUser->id]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $conversation->id,
-        'role' => CoachMessageRole::User,
-        'content' => 'Secret message',
-    ]);
+    createConversationWithMessage($otherUser, 'Secret message');
 
     Livewire::actingAs($user)
         ->test(ConversationHistory::class, ['mode' => CoachMode::Personal])
@@ -44,19 +57,8 @@ it('only shows team conversations in team mode', function () {
     $user = User::factory()->create();
     $team = Team::factory()->create();
 
-    $personalConversation = CoachConversation::factory()->create(['user_id' => $user->id]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $personalConversation->id,
-        'role' => CoachMessageRole::User,
-        'content' => 'Personal message',
-    ]);
-
-    $teamConversation = CoachConversation::factory()->teamMode($team)->create(['user_id' => $user->id]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $teamConversation->id,
-        'role' => CoachMessageRole::User,
-        'content' => 'Team message',
-    ]);
+    createConversationWithMessage($user, 'Personal message', PersonalCoachAgent::class);
+    createConversationWithMessage($user, 'Team message', TeamCoachAgent::class, $team->id);
 
     Livewire::actingAs($user)
         ->test(ConversationHistory::class, ['mode' => CoachMode::Team, 'teamId' => $team->id])
@@ -67,19 +69,8 @@ it('only shows team conversations in team mode', function () {
 it('can search conversations by message content', function () {
     $user = User::factory()->create();
 
-    $conv1 = CoachConversation::factory()->create(['user_id' => $user->id]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $conv1->id,
-        'role' => CoachMessageRole::User,
-        'content' => 'Tell me about Kubernetes',
-    ]);
-
-    $conv2 = CoachConversation::factory()->create(['user_id' => $user->id]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $conv2->id,
-        'role' => CoachMessageRole::User,
-        'content' => 'Help with Python',
-    ]);
+    createConversationWithMessage($user, 'Tell me about Kubernetes');
+    createConversationWithMessage($user, 'Help with Python');
 
     Livewire::actingAs($user)
         ->test(ConversationHistory::class, ['mode' => CoachMode::Personal])
@@ -92,12 +83,7 @@ it('can search conversations by message content', function () {
 
 it('emits conversation-selected event when selecting a conversation', function () {
     $user = User::factory()->create();
-    $conversation = CoachConversation::factory()->create(['user_id' => $user->id]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $conversation->id,
-        'role' => CoachMessageRole::User,
-        'content' => 'Test message',
-    ]);
+    $conversation = createConversationWithMessage($user, 'Test message');
 
     Livewire::actingAs($user)
         ->test(ConversationHistory::class, ['mode' => CoachMode::Personal])
@@ -107,12 +93,7 @@ it('emits conversation-selected event when selecting a conversation', function (
 
 it('highlights the current active conversation', function () {
     $user = User::factory()->create();
-    $conversation = CoachConversation::factory()->create(['user_id' => $user->id]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $conversation->id,
-        'role' => CoachMessageRole::User,
-        'content' => 'Test message',
-    ]);
+    $conversation = createConversationWithMessage($user, 'Test message');
 
     Livewire::actingAs($user)
         ->test(ConversationHistory::class, [
@@ -124,12 +105,7 @@ it('highlights the current active conversation', function () {
 
 it('shows empty state when search has no results', function () {
     $user = User::factory()->create();
-    $conversation = CoachConversation::factory()->create(['user_id' => $user->id]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $conversation->id,
-        'role' => CoachMessageRole::User,
-        'content' => 'Test message',
-    ]);
+    createConversationWithMessage($user, 'Test message');
 
     Livewire::actingAs($user)
         ->test(ConversationHistory::class, ['mode' => CoachMode::Personal])
@@ -139,12 +115,7 @@ it('shows empty state when search has no results', function () {
 
 it('can delete a conversation', function () {
     $user = User::factory()->create();
-    $conversation = CoachConversation::factory()->create(['user_id' => $user->id]);
-    CoachMessage::factory()->create([
-        'coach_conversation_id' => $conversation->id,
-        'role' => CoachMessageRole::User,
-        'content' => 'Test message',
-    ]);
+    $conversation = createConversationWithMessage($user, 'Test message');
 
     Livewire::actingAs($user)
         ->test(ConversationHistory::class, ['mode' => CoachMode::Personal])
@@ -152,13 +123,13 @@ it('can delete a conversation', function () {
         ->call('deleteConversation', $conversation->id)
         ->assertDontSee('Test message');
 
-    expect(CoachConversation::find($conversation->id))->toBeNull();
-    expect(CoachMessage::where('coach_conversation_id', $conversation->id)->count())->toBe(0);
+    expect(AgentConversation::find($conversation->id))->toBeNull();
+    expect(AgentConversationMessage::where('conversation_id', $conversation->id)->count())->toBe(0);
 });
 
 it('emits event when deleting the active conversation', function () {
     $user = User::factory()->create();
-    $conversation = CoachConversation::factory()->create(['user_id' => $user->id]);
+    $conversation = createConversationWithMessage($user, 'Test message');
 
     Livewire::actingAs($user)
         ->test(ConversationHistory::class, [
@@ -171,8 +142,8 @@ it('emits event when deleting the active conversation', function () {
 
 it('does not emit event when deleting a non-active conversation', function () {
     $user = User::factory()->create();
-    $activeConversation = CoachConversation::factory()->create(['user_id' => $user->id]);
-    $otherConversation = CoachConversation::factory()->create(['user_id' => $user->id]);
+    $activeConversation = createConversationWithMessage($user, 'Active message');
+    $otherConversation = createConversationWithMessage($user, 'Other message');
 
     Livewire::actingAs($user)
         ->test(ConversationHistory::class, [
@@ -185,26 +156,28 @@ it('does not emit event when deleting a non-active conversation', function () {
 
 it('can delete all conversations', function () {
     $user = User::factory()->create();
-    CoachConversation::factory()->count(3)->create(['user_id' => $user->id]);
+    createConversationWithMessage($user, 'Message one');
+    createConversationWithMessage($user, 'Message two');
+    createConversationWithMessage($user, 'Message three');
 
-    expect(CoachConversation::where('user_id', $user->id)->count())->toBe(3);
+    expect(AgentConversation::where('user_id', $user->id)->count())->toBe(3);
 
     Livewire::actingAs($user)
         ->test(ConversationHistory::class, ['mode' => CoachMode::Personal])
         ->call('deleteAllConversations');
 
-    expect(CoachConversation::where('user_id', $user->id)->count())->toBe(0);
+    expect(AgentConversation::where('user_id', $user->id)->count())->toBe(0);
 });
 
 it('cannot delete another users conversation', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
-    $otherConversation = CoachConversation::factory()->create(['user_id' => $otherUser->id]);
+    $otherConversation = createConversationWithMessage($otherUser, 'Other user message');
 
     Livewire::actingAs($user)
         ->test(ConversationHistory::class, ['mode' => CoachMode::Personal])
         ->call('deleteConversation', $otherConversation->id);
 
     // Conversation should still exist - silently ignored since it's not in the user's list
-    expect(CoachConversation::find($otherConversation->id))->not->toBeNull();
+    expect(AgentConversation::find($otherConversation->id))->not->toBeNull();
 });

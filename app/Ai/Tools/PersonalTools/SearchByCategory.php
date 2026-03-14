@@ -1,27 +1,36 @@
 <?php
 
-namespace App\Services\SkillsCoach\Tools;
+namespace App\Ai\Tools\PersonalTools;
 
 use App\Enums\SkillLevel;
 use App\Models\SkillCategory;
 use App\Models\User;
 use App\Services\SkillsCoach\CoachContext;
-use Prism\Prism\Tool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Tools\Request;
 
-class SearchByCategory extends Tool
+class SearchByCategory implements Tool
 {
     public function __construct(
         protected CoachContext $context
-    ) {
-        $this
-            ->as('search_by_category')
-            ->for('Find colleagues who are strong in a particular skill category')
-            ->withStringParameter('category_name', 'The name of the category to search in')
-            ->using($this);
+    ) {}
+
+    public function description(): string
+    {
+        return 'Find colleagues who are strong in a particular skill category';
     }
 
-    public function __invoke(string $category_name): string
+    public function schema(JsonSchema $schema): array
     {
+        return [
+            'category_name' => $schema->string()->required(),
+        ];
+    }
+
+    public function handle(Request $request): string
+    {
+        $category_name = $request['category_name'];
         $currentUser = $this->context->getUserOrFail();
 
         $category = SkillCategory::where('name', 'like', "%{$category_name}%")->first();
