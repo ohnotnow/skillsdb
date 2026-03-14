@@ -42,3 +42,5 @@ prism*
 .dolt/
 *.db
 .ait*
+dev_docs*
+stubs*
