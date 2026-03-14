@@ -35,6 +35,9 @@ example-simple-spout.txt
 storage/debugbar/
 prism*
 
+# Laravel Cloud local config
+.cloud/
+
 # Dolt database files (added by bd init)
 .dolt/
 *.db
