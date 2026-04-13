@@ -6,7 +6,9 @@ use App\Enums\SkillLevel;
 use App\Models\Skill;
 use App\Models\SkillCategory;
 use App\Models\SkillHistory;
+use App\Models\SkillUser;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -14,8 +16,8 @@ use Livewire\Component;
 
 /**
  * @property int $teamMemberCount
- * @property \Illuminate\Database\Eloquent\Collection $approvedSkillsWithUsers
- * @property \Illuminate\Database\Eloquent\Collection $allCategories
+ * @property Collection $approvedSkillsWithUsers
+ * @property Collection $allCategories
  * @property array $categoryStrength
  */
 #[Layout('components.layouts.app')]
@@ -41,7 +43,7 @@ class SkillsDashboard extends Component
     #[Computed]
     public function skillLevelCounts(): array
     {
-        $counts = \App\Models\SkillUser::query()
+        $counts = SkillUser::query()
             ->selectRaw('level, COUNT(*) as count')
             ->groupBy('level')
             ->pluck('count', 'level')
@@ -63,7 +65,7 @@ class SkillsDashboard extends Component
     #[Computed]
     public function averageSkillsPerUser(): float
     {
-        $totalSkillAssignments = \App\Models\SkillUser::count();
+        $totalSkillAssignments = SkillUser::count();
         $userCount = $this->teamMemberCount;
 
         return $userCount > 0 ? round($totalSkillAssignments / $userCount, 1) : 0;

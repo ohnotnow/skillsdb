@@ -2,19 +2,21 @@
 
 namespace App\Livewire\Admin;
 
+use App\Enums\SkillHistoryEvent;
 use App\Models\Skill;
 use App\Models\SkillHistory;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 /**
- * @property \Carbon\Carbon $earliestDate
+ * @property Carbon $earliestDate
  * @property int $timelineMax
- * @property \Carbon\Carbon $viewingDate
- * @property \Illuminate\Support\Collection $users
- * @property \Illuminate\Support\Collection $skills
+ * @property Carbon $viewingDate
+ * @property Collection $users
+ * @property Collection $skills
  * @property array $categoryColours
  */
 class CompactMatrix extends Component
@@ -85,7 +87,7 @@ class CompactMatrix extends Component
         foreach ($bySkill as $skillId => $events) {
             $latestEvent = $events->last();
 
-            if ($latestEvent && $latestEvent->event_type !== \App\Enums\SkillHistoryEvent::Removed) {
+            if ($latestEvent && $latestEvent->event_type !== SkillHistoryEvent::Removed) {
                 $result[$skillId] = $latestEvent->new_level;
             }
         }

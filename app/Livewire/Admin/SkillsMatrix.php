@@ -9,6 +9,7 @@ use App\Models\SkillCategory;
 use App\Models\SkillHistory;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -17,15 +18,15 @@ use Ohffs\SimpleSpout\ExcelSheet;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * @property \Carbon\Carbon $earliestDate
+ * @property Carbon $earliestDate
  * @property int $timelineMax
- * @property \Carbon\Carbon $viewingDate
- * @property \Illuminate\Database\Eloquent\Collection $users
- * @property \Illuminate\Database\Eloquent\Collection $skills
+ * @property Carbon $viewingDate
+ * @property Collection $users
+ * @property Collection $skills
  * @property array $categoryColours
- * @property \Illuminate\Database\Eloquent\Collection $allUsers
- * @property \Illuminate\Database\Eloquent\Collection $allSkills
- * @property array<int, array<int, \App\Enums\SkillLevel>> $skillLevelsAtDate
+ * @property Collection $allUsers
+ * @property Collection $allSkills
+ * @property array<int, array<int, SkillLevel>> $skillLevelsAtDate
  */
 #[Layout('components.layouts.app')]
 class SkillsMatrix extends Component

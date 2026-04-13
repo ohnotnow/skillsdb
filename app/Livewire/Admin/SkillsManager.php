@@ -6,6 +6,7 @@ use App\Enums\FluxColour;
 use App\Models\Skill;
 use App\Models\SkillCategory;
 use Flux;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
@@ -18,8 +19,8 @@ use Livewire\Component;
  * @property \Illuminate\Database\Eloquent\Collection $categories
  * @property array $fluxColours
  * @property array $filteredCategoryOptions
- * @property \Illuminate\Support\Collection $filteredParentSkillOptions
- * @property \App\Models\SkillCategory|null $deletingCategory
+ * @property Collection $filteredParentSkillOptions
+ * @property SkillCategory|null $deletingCategory
  * @property \Illuminate\Database\Eloquent\Collection $migrationTargetCategories
  */
 #[Layout('components.layouts.app')]

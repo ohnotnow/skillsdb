@@ -5,11 +5,12 @@ namespace Database\Factories;
 use App\Enums\SkillHistoryEvent;
 use App\Enums\SkillLevel;
 use App\Models\Skill;
+use App\Models\SkillHistory;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\SkillHistory>
+ * @extends Factory<SkillHistory>
  */
 class SkillHistoryFactory extends Factory
 {

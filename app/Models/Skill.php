@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Database\Factories\SkillFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Skill extends Model
 {
-    /** @use HasFactory<\Database\Factories\SkillFactory> */
+    /** @use HasFactory<SkillFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -96,9 +98,9 @@ class Skill extends Model
      *
      * @param  int  $days  Number of days to look back
      * @param  int  $limit  Maximum number of skills to return
-     * @return \Illuminate\Database\Eloquent\Collection<int, static>
+     * @return Collection<int, static>
      */
-    public static function getTrendingSkills(int $days = 30, int $limit = 5): \Illuminate\Database\Eloquent\Collection
+    public static function getTrendingSkills(int $days = 30, int $limit = 5): Collection
     {
         return static::query()
             ->approved()

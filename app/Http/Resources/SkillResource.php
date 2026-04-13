@@ -2,13 +2,15 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Skill;
+use App\Models\SkillUser;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin \App\Models\Skill
+ * @mixin Skill
  *
- * @property \App\Models\SkillUser $pivot
+ * @property SkillUser $pivot
  */
 class SkillResource extends JsonResource
 {

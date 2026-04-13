@@ -5,6 +5,7 @@ use App\Livewire\Admin\SkillsMatrix;
 use App\Models\Skill;
 use App\Models\User;
 use Livewire\Livewire;
+use Ohffs\SimpleSpout\ExcelSheet;
 
 it('requires authentication', function () {
     $this->get('/admin/matrix')
@@ -273,7 +274,7 @@ it('export includes correct headers', function () {
     $tempFile = tempnam(sys_get_temp_dir(), 'export_').'.xlsx';
     file_put_contents($tempFile, base64_decode($content));
 
-    $data = (new \Ohffs\SimpleSpout\ExcelSheet)->importFirst($tempFile);
+    $data = (new ExcelSheet)->importFirst($tempFile);
     unlink($tempFile);
 
     expect($data[0])->toBe(['Name', 'Docker', 'Git']);
@@ -294,7 +295,7 @@ it('export includes user data with skill levels', function () {
     $tempFile = tempnam(sys_get_temp_dir(), 'export_').'.xlsx';
     file_put_contents($tempFile, base64_decode($content));
 
-    $data = (new \Ohffs\SimpleSpout\ExcelSheet)->importFirst($tempFile);
+    $data = (new ExcelSheet)->importFirst($tempFile);
     unlink($tempFile);
 
     // Find Alice's row (users are sorted by surname, so admin might be first)
@@ -318,7 +319,7 @@ it('export shows empty string for skills user does not have', function () {
     $tempFile = tempnam(sys_get_temp_dir(), 'export_').'.xlsx';
     file_put_contents($tempFile, base64_decode($content));
 
-    $data = (new \Ohffs\SimpleSpout\ExcelSheet)->importFirst($tempFile);
+    $data = (new ExcelSheet)->importFirst($tempFile);
     unlink($tempFile);
 
     $aliceRow = collect($data)->first(fn ($row) => $row[0] === 'Alice Smith');
@@ -340,7 +341,7 @@ it('export respects skill filter', function () {
     $tempFile = tempnam(sys_get_temp_dir(), 'export_').'.xlsx';
     file_put_contents($tempFile, base64_decode($content));
 
-    $data = (new \Ohffs\SimpleSpout\ExcelSheet)->importFirst($tempFile);
+    $data = (new ExcelSheet)->importFirst($tempFile);
     unlink($tempFile);
 
     expect($data[0])->toBe(['Name', 'Docker']);
@@ -362,7 +363,7 @@ it('export respects user filter', function () {
     $tempFile = tempnam(sys_get_temp_dir(), 'export_').'.xlsx';
     file_put_contents($tempFile, base64_decode($content));
 
-    $data = (new \Ohffs\SimpleSpout\ExcelSheet)->importFirst($tempFile);
+    $data = (new ExcelSheet)->importFirst($tempFile);
     unlink($tempFile);
 
     $names = collect($data)->skip(1)->pluck(0)->toArray();

@@ -4,18 +4,19 @@ namespace App\Livewire;
 
 use App\Models\Skill;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 /**
- * @property \App\Models\User $user
+ * @property User $user
  * @property array $skillDistribution
  * @property string $lastUpdatedText
  * @property bool $hasStaleSkills
- * @property \Illuminate\Support\Collection $trendingSkills
+ * @property Collection $trendingSkills
  * @property array $skillsOverTime
- * @property \Illuminate\Support\Collection $colleagueInsights
+ * @property Collection $colleagueInsights
  */
 class SkillsDashboard extends Component
 {
@@ -71,7 +72,7 @@ class SkillsDashboard extends Component
     /**
      * Get 3 random skills the user has, with colleagues who share them.
      *
-     * @return \Illuminate\Support\Collection<int, array{skill: Skill, colleagues: \Illuminate\Support\Collection<int, User>}>
+     * @return Collection<int, array{skill: Skill, colleagues: Collection<int, User>}>
      */
     #[Computed]
     public function colleagueInsights()

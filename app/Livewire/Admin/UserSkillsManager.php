@@ -3,12 +3,13 @@
 namespace App\Livewire\Admin;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
-/** @property \Illuminate\Database\Eloquent\Collection $users */
+/** @property Collection $users */
 #[Layout('components.layouts.app')]
 class UserSkillsManager extends Component
 {

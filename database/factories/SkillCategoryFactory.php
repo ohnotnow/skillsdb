@@ -3,10 +3,11 @@
 namespace Database\Factories;
 
 use App\Enums\FluxColour;
+use App\Models\SkillCategory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\SkillCategory>
+ * @extends Factory<SkillCategory>
  */
 class SkillCategoryFactory extends Factory
 {

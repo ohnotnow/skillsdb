@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Enums\SkillHistoryEvent;
+use Database\Factories\SkillHistoryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SkillHistory extends Model
 {
-    /** @use HasFactory<\Database\Factories\SkillHistoryFactory> */
+    /** @use HasFactory<SkillHistoryFactory> */
     use HasFactory;
 
     public $timestamps = false;

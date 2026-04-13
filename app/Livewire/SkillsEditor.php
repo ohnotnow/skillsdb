@@ -6,15 +6,16 @@ use App\Enums\SkillLevel;
 use App\Models\Skill;
 use App\Models\User;
 use Flux;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
- * @property \App\Models\User $user
+ * @property User $user
  * @property bool $isAdminContext
- * @property \Illuminate\Database\Eloquent\Collection $skills
+ * @property Collection $skills
  * @property array $skillLevels
  */
 class SkillsEditor extends Component

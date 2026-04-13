@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin;
 
+use Carbon\Carbon;
 use Flux;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -36,7 +37,7 @@ class ApiTokensManager extends Component
             'expiresAt' => ['nullable', 'date', 'after:today'],
         ]);
 
-        $expiresAt = $this->expiresAt ? \Carbon\Carbon::parse($this->expiresAt) : null;
+        $expiresAt = $this->expiresAt ? Carbon::parse($this->expiresAt) : null;
 
         $token = Auth::user()->createToken(
             $this->tokenName,

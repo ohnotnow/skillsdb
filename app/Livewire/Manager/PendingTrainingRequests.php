@@ -10,6 +10,7 @@ use App\Models\TrainingCourse;
 use App\Models\TrainingCourseUser;
 use App\Models\User;
 use Flux;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Attributes\Computed;
@@ -20,7 +21,7 @@ use Livewire\Component;
 /**
  * @property \Illuminate\Database\Eloquent\Collection $pendingRequests
  * @property \Illuminate\Database\Eloquent\Collection $teamMembers
- * @property \Illuminate\Support\Collection $availableCoursesForEnrolling
+ * @property Collection $availableCoursesForEnrolling
  */
 #[Layout('components.layouts.app')]
 class PendingTrainingRequests extends Component
@@ -105,7 +106,7 @@ class PendingTrainingRequests extends Component
             'approved_at' => now(),
         ]);
 
-        /** @var \App\Models\TrainingCourse $course */
+        /** @var TrainingCourse $course */
         $course = $enrollment->trainingCourse;
         Mail::to($enrollment->user)->send(
             new TrainingRequestApproved($course, Auth::user())
@@ -131,7 +132,7 @@ class PendingTrainingRequests extends Component
             'rejection_reason' => $reason,
         ]);
 
-        /** @var \App\Models\TrainingCourse $course */
+        /** @var TrainingCourse $course */
         $course = $enrollment->trainingCourse;
         Mail::to($enrollment->user)->send(
             new TrainingRequestRejected($course, Auth::user(), $reason)
