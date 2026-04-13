@@ -1,135 +1,117 @@
-name: build-images
+name: tests
 
 on:
-  workflow_dispatch:
   push:
-    tags:
-      - "**"
-    branches:
-      - "**"
+    branches: ["**"]
   pull_request:
-    branches:
-      - master
+    branches: [master]
 
 jobs:
-  build-and-test:
+  test-mysql:
+    name: Tests (MySQL 8.4)
     runs-on: ubuntu-latest
+
     services:
       mysql:
-        image: mysql:5.7
+        image: mysql:8.4
         env:
-          MYSQL_ROOT_PASSWORD: homestead
-          MYSQL_DATABASE: homestead
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: skillsdb_test
         ports:
-          - 33306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h 127.0.0.1" --health-interval=10s --health-timeout=5s --health-retries=5
 
     steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v3
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
-          driver-opts: network=host
-      -
-        name: Cache Docker layers
-        uses: actions/cache@v2
+          php-version: "8.4"
+          extensions: mbstring, pdo, pdo_mysql, xml, curl, zip, bcmath, gd
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare environment
+        run: |
+          cp .env.ci .env
+          php artisan key:generate
+
+      - name: Install NPM dependencies and build assets
+        run: npm ci && npm run build
+
+      - name: Run tests
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: skillsdb_test
+          DB_USERNAME: root
+          DB_PASSWORD: password
+        run: php artisan test --compact --configuration=phpunit.ci.xml
+
+  test-pgsql:
+    name: Tests (PostgreSQL 17)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: skillsdb_test
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready -U postgres" --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-      -
-        name: Build and push local test image
-        uses: docker/build-push-action@v2
+          php-version: "8.4"
+          extensions: mbstring, pdo, pdo_pgsql, xml, curl, zip, bcmath, gd
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare environment
+        run: |
+          cp .env.ci .env
+          php artisan key:generate
+
+      - name: Install NPM dependencies and build assets
+        run: npm ci && npm run build
+
+      - name: Run tests
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: skillsdb_test
+          DB_USERNAME: postgres
+          DB_PASSWORD: password
+        run: php artisan test --compact --configuration=phpunit.ci.xml
+
+  lint:
+    name: Pint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64 #,linux/arm/v7,linux/arm64
-          push: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-          target: ci
-          build-args: |
-            PHP_VERSION=8.0
-          tags: |
-            localhost:5000/${{ github.event.repository.name }}:qa-${{ github.sha }}
-      -
-        name: Run tests
-        uses: addnab/docker-run-action@v3
-        with:
-          # username: ${{ secrets.DOCKERHUB_USERNAME }}
-          # password: ${{ secrets.DOCKERHUB_TOKEN }}
-          options: "--network host"
-          image: localhost:5000/${{ github.event.repository.name }}:qa-${{ github.sha }}
-          run: rm -fv .env && cp -v .env.github .env && php artisan config:clear && CI=1 APP_ENV=testing ./vendor/bin/phpunit -c phpunit.github.xml
-      -
-        name: Get tag
-        id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF##*/}
-      -
-        name: Login to DockerHub
-        if: startsWith(steps.get_version.outputs.VERSION, 'v') || startsWith(steps.get_version.outputs.VERSION, 'qa') || github.ref == 'refs/heads/master'
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Retag and publish local QA image
-        if: startsWith(steps.get_version.outputs.VERSION, 'qa')
-        uses: akhilerm/tag-push-action@v1.1.0
-        with:
-          src: localhost:5000/${{ github.event.repository.name }}:qa-${{ github.sha }}
-          dst: |
-            docker.io/uogsoe/${{ github.event.repository.name }}:${{ steps.get_version.outputs.VERSION }}
-      -
-        name: Build and push prod
-        if: github.ref == 'refs/heads/master'
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64 #,linux/arm/v7,linux/arm64
-          push: true
-          target: prod
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-          build-args: |
-            PHP_VERSION=8.0
-          tags: |
-            uogsoe/${{ github.event.repository.name }}:prod-${{ github.sha }}
-      -
-        name: Build and push versioned tag
-        if: startsWith(steps.get_version.outputs.VERSION, 'v')
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64 #,linux/arm/v7,linux/arm64
-          push: true
-          target: prod
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-          build-args: |
-            PHP_VERSION=8.0
-          tags: |
-            docker.io/uogsoe/${{ github.event.repository.name }}:${{ steps.get_version.outputs.VERSION }}
-      -
-        name: Create automatic release on new versioned tag
-        if: startsWith(steps.get_version.outputs.VERSION, 'v')
-        uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          draft: false
-          prerelease: false
-          automatic_release_tag: ${{ steps.get_version.outputs.VERSION }}
-          title: ${{ steps.get_version.outputs.VERSION }}
+          php-version: "8.4"
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run Pint
+        run: vendor/bin/pint --test
