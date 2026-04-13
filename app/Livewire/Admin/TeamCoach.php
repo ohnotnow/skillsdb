@@ -83,7 +83,7 @@ class TeamCoach extends Component
             ->where('role', 'user')
             ->latest()
             ->first()
-            ?->update(['meta' => json_encode(['team_id' => $this->teamId])]);
+            ?->update(['meta' => ['team_id' => $this->teamId]]);
 
         // Add assistant response to UI
         $this->messages[] = [
