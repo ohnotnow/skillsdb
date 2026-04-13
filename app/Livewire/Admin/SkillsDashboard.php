@@ -44,9 +44,8 @@ class SkillsDashboard extends Component
     public function skillLevelCounts(): array
     {
         $counts = SkillUser::query()
-            ->selectRaw('level, COUNT(*) as count')
-            ->groupBy('level')
-            ->pluck('count', 'level')
+            ->pluck('level')
+            ->countBy()
             ->toArray();
 
         return [

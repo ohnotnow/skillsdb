@@ -81,6 +81,11 @@ class Skill extends Model
         return $query->whereNull('approved_at');
     }
 
+    public function scopeByName($query, string $name)
+    {
+        return $query->whereRaw('LOWER(name) = ?', [strtolower(trim($name))]);
+    }
+
     // Custom methods
 
     public function isApproved(): bool

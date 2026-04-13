@@ -82,9 +82,13 @@ class SkillsManager extends Component
                         ->orWhereHas('parent', fn ($q) => $q->where('name', 'like', "%{$this->search}%"));
                 });
             })
-            ->orderByRaw('approved_at IS NOT NULL, approved_at DESC')
-            ->orderBy('name')
-            ->get();
+            ->get()
+            ->sortBy([
+                [fn ($skill) => $skill->isApproved() ? 1 : 0, 'asc'],
+                ['approved_at', 'desc'],
+                ['name', 'asc'],
+            ])
+            ->values();
     }
 
     #[Computed]

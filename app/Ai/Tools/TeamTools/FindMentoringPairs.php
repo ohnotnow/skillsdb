@@ -326,11 +326,7 @@ class FindMentoringPairs implements Tool
 
     protected function findSkillByName(string $name): ?Skill
     {
-        $nameLower = strtolower(trim($name));
-
-        return Skill::whereRaw('LOWER(name) = ?', [$nameLower])
-            ->approved()
-            ->first();
+        return Skill::byName($name)->approved()->first();
     }
 
     protected function findSimilarSkills(string $searchTerm): array

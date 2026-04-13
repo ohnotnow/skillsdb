@@ -162,9 +162,8 @@ class User extends Authenticatable
     public function getSkillDistribution(): array
     {
         $counts = $this->skills()
-            ->selectRaw('level, count(*) as count')
-            ->groupBy('level')
-            ->pluck('count', 'level')
+            ->pluck('skill_user.level')
+            ->countBy()
             ->toArray();
 
         return [
