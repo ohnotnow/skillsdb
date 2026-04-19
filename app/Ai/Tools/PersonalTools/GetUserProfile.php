@@ -44,6 +44,7 @@ class GetUserProfile implements Tool
 
         return json_encode([
             'name' => $user->full_name,
+            'bio' => $user->bio,
             'total_skills' => $distribution['total'],
             'distribution' => [
                 'high' => $distribution['high'],

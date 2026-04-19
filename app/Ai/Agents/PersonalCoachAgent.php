@@ -3,6 +3,7 @@
 namespace App\Ai\Agents;
 
 use App\Ai\Tools\FindTrainingCourses;
+use App\Ai\Tools\PersonalTools\FindByInterest;
 use App\Ai\Tools\PersonalTools\FindExperts;
 use App\Ai\Tools\PersonalTools\FindSkillSharers;
 use App\Ai\Tools\PersonalTools\GetSkillJourney;
@@ -56,6 +57,7 @@ class PersonalCoachAgent implements Agent, Conversational, HasTools
             app(GetUserProfile::class),
             app(FindExperts::class),
             app(FindSkillSharers::class),
+            app(FindByInterest::class),
             app(GetTrendingSkills::class),
             app(GetTeamGaps::class),
             app(GetSkillJourney::class),

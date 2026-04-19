@@ -56,7 +56,29 @@ class TestDataSeeder extends Seeder
             $users[] = User::factory()->create();
         }
 
+        $this->sprinkleSampleBios($users);
+
         return $users;
+    }
+
+    /**
+     * Give a handful of users a sample bio so the coach has something to work with.
+     *
+     * @param  array<User>  $users
+     */
+    private function sprinkleSampleBios(array $users): void
+    {
+        $sampleBios = [
+            'I mess about with Raspberry Pis and ESP32s for home automation. Used to be a Solaris admin back in the day. Keen to learn more about Kubernetes - running a little k3s cluster at home.',
+            'Keen on functional programming (Haskell, Elm) in my spare time. Used to run a small Linux user group. Happy to chat about Vim setups to anyone who will listen.',
+            'Background in sysadmin on legacy Windows NT systems. Currently reading a lot about observability and distributed tracing. Grow vegetables on an allotment at weekends.',
+            'I play with 3D printers and bake a lot of bread. Former network admin - patch panels are calming. Would love to get involved in anything to do with accessibility.',
+            'Interested in retro computing - I restore old Amigas and BBC Micros. Professionally I have been doing a lot of CI/CD pipeline work lately.',
+        ];
+
+        foreach (array_slice($users, 0, count($sampleBios)) as $index => $user) {
+            $user->update(['bio' => $sampleBios[$index]]);
+        }
     }
 
     private function createSkillCategories(): array

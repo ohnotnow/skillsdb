@@ -76,6 +76,7 @@ class GetTeamOverview implements Tool
         $lastActivity = $member->skillHistory->first()?->created_at;
 
         return $this->formatPersonWithContactability($member, [
+            'bio' => $member->bio,
             'org_teams' => $member->teams->pluck('name')->toArray(),
             'skill_count' => $member->skills->count(),
             'top_skills' => $topSkills,

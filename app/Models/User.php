@@ -30,6 +30,7 @@ class User extends Authenticatable
         'password',
         'last_updated_skills_at',
         'coach_contactable',
+        'bio',
     ];
 
     protected $hidden = [

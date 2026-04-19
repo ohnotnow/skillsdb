@@ -4,9 +4,12 @@
             <flux:heading size="xl" level="1">My Profile</flux:heading>
             <flux:text class="mt-2">Manage your skills and training.</flux:text>
         </div>
-        <flux:button :href="route('coach')" icon="sparkles" variant="subtle">
-            Skills Coach
-        </flux:button>
+        <div class="flex items-center gap-2">
+            <livewire:bio-editor />
+            <flux:button :href="route('coach')" icon="sparkles" variant="subtle">
+                Skills Coach
+            </flux:button>
+        </div>
     </div>
 
     <flux:tab.group>

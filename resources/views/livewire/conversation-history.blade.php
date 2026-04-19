@@ -22,10 +22,10 @@
     {{-- Conversation List --}}
     <div class="space-y-2 max-h-96 overflow-y-auto">
         @forelse ($this->conversations as $conversation)
-            <div wire:key="conv-{{ $conversation->id }}" class="flex items-center gap-2">
+            <div wire:key="conv-{{ $conversation->id }}" class="flex items-center gap-2 min-w-0">
                 <button
                     wire:click="selectConversation('{{ $conversation->id }}')"
-                    class="flex-1 text-left p-3 rounded-lg border transition-colors cursor-pointer {{ $currentConversationId === $conversation->id ? 'border-accent bg-accent/5' : 'border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800' }}"
+                    class="flex-1 min-w-0 text-left p-3 rounded-lg border transition-colors cursor-pointer {{ $currentConversationId === $conversation->id ? 'border-accent bg-accent/5' : 'border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800' }}"
                 >
                     <flux:text class="text-xs text-zinc-500 dark:text-zinc-400">
                         {{ $conversation->created_at->format('M j, Y g:ia') }}

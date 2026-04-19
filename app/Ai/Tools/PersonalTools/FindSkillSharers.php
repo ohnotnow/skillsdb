@@ -54,6 +54,7 @@ class FindSkillSharers implements Tool
             ->map(fn ($u) => [
                 'name' => $u->full_name,
                 'level' => $u->skills->first()->pivot->level->label(),
+                'bio' => $u->bio,
             ])
             /** @phpstan-ignore-next-line match.unhandled */
             ->sortByDesc(fn ($s) => match ($s['level']) {

@@ -61,6 +61,7 @@ class GetMemberSkills implements Tool
 
         return json_encode([
             'name' => $person->full_name,
+            'bio' => $person->bio,
             'org_teams' => $person->teams->pluck('name')->toArray(),
             'skills' => $skillsByLevel,
             'recent_activity' => $recentActivity,

@@ -54,6 +54,7 @@ class FindExperts implements Tool
             ->get()
             ->map(fn ($u) => [
                 'name' => $u->full_name,
+                'bio' => $u->bio,
                 'note' => $u->id === $currentUser->id ? '(this is you)' : null,
             ])
             ->filter(fn ($e) => $e['note'] === null)

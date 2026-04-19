@@ -40,6 +40,9 @@ class SystemPrompt
 
         $distribution = $user->getSkillDistribution();
         $stale = $user->hasStaleSkills() ? "Note: Skills haven't been updated in over 4 weeks." : '';
+        $bio = $user->bio
+            ? "Bio (their own words about hobbies, interests and side projects):\n{$user->bio}"
+            : 'Bio: not provided yet.';
 
         return <<<PROMPT
 ## Current User
@@ -48,6 +51,8 @@ Name: {$user->full_name}
 Skills ({$distribution['total']} total): {$skillSummary}
 Distribution: {$distribution['high']} High, {$distribution['medium']} Medium, {$distribution['low']} Low
 {$stale}
+
+{$bio}
 PROMPT;
     }
 
