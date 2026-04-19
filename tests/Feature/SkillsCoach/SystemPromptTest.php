@@ -20,3 +20,13 @@ it('notes when the user has not set a bio', function () {
 
     expect($prompt)->toContain('not provided');
 });
+
+it('tells the coach to stay on topic', function () {
+    $user = User::factory()->create();
+
+    $prompt = app(SystemPrompt::class)->build($user);
+
+    expect($prompt)->toContain("What's In Scope")
+        ->toContain('steer')
+        ->toContain('career development');
+});
