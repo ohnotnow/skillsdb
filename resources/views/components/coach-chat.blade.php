@@ -135,13 +135,28 @@
 
             @if ($pendingPrompt !== null)
                 {{-- Streaming Coach Message --}}
-                <div wire:key="streaming-response" class="flex items-start gap-2.5 pr-8">
+                <div wire:key="streaming-response"
+                    x-data="{ empty: true }"
+                    x-init="$nextTick(() => {
+                        const check = () => empty = ! $refs.stream.textContent.trim();
+                        new MutationObserver(check).observe($refs.stream, { childList: true, characterData: true, subtree: true });
+                        check();
+                    })"
+                    class="flex items-start gap-2.5 pr-8">
                     <div class="shrink-0 w-7 h-7 mt-1.5 rounded-full {{ $avatarGradient }} flex items-center justify-center {{ $avatarShadowSmall }}">
                         <flux:icon :name="$icon" variant="micro" class="w-3.5 h-3.5 text-white" />
                     </div>
                     <div class="{{ $bubbleBg }} rounded-2xl px-4 py-2.5 border {{ $bubbleBorder }} coach-markdown text-zinc-700 dark:text-zinc-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
-                        <span wire:stream="coach-response"></span>
-                        <span class="inline-block w-2 h-4 bg-current opacity-40 animate-pulse align-middle"></span>
+                        <span x-ref="stream" wire:stream="coach-response"></span>
+                        <span x-show="empty" class="inline-flex items-center gap-1 italic opacity-70">
+                            <span>Coach is thinking</span>
+                            <span class="inline-flex gap-0.5">
+                                <span class="w-1 h-1 rounded-full bg-current animate-bounce" style="animation-delay: 0ms"></span>
+                                <span class="w-1 h-1 rounded-full bg-current animate-bounce" style="animation-delay: 150ms"></span>
+                                <span class="w-1 h-1 rounded-full bg-current animate-bounce" style="animation-delay: 300ms"></span>
+                            </span>
+                        </span>
+                        <span x-show="!empty" class="inline-block w-2 h-4 bg-current opacity-40 animate-pulse align-middle"></span>
                     </div>
                 </div>
             @elseif (empty($messages))
@@ -183,14 +198,14 @@
     {{-- Composer --}}
     @unless ($disabled)
         <form x-ref="composer" wire:submit="send">
-            <flux:composer wire:model="prompt" label="Message" label:sr-only :placeholder="$placeholder">
+            <flux:composer wire:model="prompt" label="Message" label:sr-only :placeholder="$pendingPrompt !== null ? 'Waiting for the coach to reply...' : $placeholder" :disabled="$pendingPrompt !== null">
                 <x-slot name="actionsLeading">
                     <flux:button size="sm" variant="subtle" icon="paper-clip" />
                     <flux:button size="sm" variant="subtle" icon="slash" />
                     <flux:button size="sm" variant="subtle" icon="adjustments-horizontal" />
                 </x-slot>
                 <x-slot name="actionsTrailing">
-                    <flux:button type="submit" size="sm" variant="primary" icon="paper-airplane" />
+                    <flux:button type="submit" size="sm" variant="primary" icon="paper-airplane" :disabled="$pendingPrompt !== null" />
                 </x-slot>
             </flux:composer>
             <flux:error name="prompt" class="mt-2" />
