@@ -13,4 +13,5 @@
     :messages="$messages"
     :mode="\App\Enums\CoachMode::Personal"
     :conversation-id="$conversationId"
+    :pending-prompt="$pendingPrompt"
 />

@@ -22,6 +22,7 @@
     'mode' => null,
     'teamId' => null,
     'conversationId' => null,
+    'pendingPrompt' => null,
 ])
 
 <div class="flex flex-col h-[calc(100vh-12rem)] max-w-3xl mx-auto" x-data="{ suggestions: @js($suggestions) }"
@@ -35,6 +36,9 @@
                 $refs.composer.querySelector('textarea')?.focus();
             });
         });
+        new MutationObserver(() => {
+            $refs.chatArea.scrollTop = $refs.chatArea.scrollHeight;
+        }).observe($refs.chatArea, { childList: true, subtree: true, characterData: true });
     ">
 
     {{-- Header --}}
@@ -127,6 +131,20 @@
                     </div>
                 @endif
             @empty
+            @endforelse
+
+            @if ($pendingPrompt !== null)
+                {{-- Streaming Coach Message --}}
+                <div wire:key="streaming-response" class="flex items-start gap-2.5 pr-8">
+                    <div class="shrink-0 w-7 h-7 mt-1.5 rounded-full {{ $avatarGradient }} flex items-center justify-center {{ $avatarShadowSmall }}">
+                        <flux:icon :name="$icon" variant="micro" class="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <div class="{{ $bubbleBg }} rounded-2xl px-4 py-2.5 border {{ $bubbleBorder }} coach-markdown text-zinc-700 dark:text-zinc-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+                        <span wire:stream="coach-response"></span>
+                        <span class="inline-block w-2 h-4 bg-current opacity-40 animate-pulse align-middle"></span>
+                    </div>
+                </div>
+            @elseif (empty($messages))
                 {{-- Welcome State --}}
                 <div class="flex items-center justify-center h-full min-h-64 px-4">
                     <div class="text-center max-w-sm">
@@ -158,7 +176,7 @@
                         </div>
                     </div>
                 </div>
-            @endforelse
+            @endif
         @endif
     </div>
 

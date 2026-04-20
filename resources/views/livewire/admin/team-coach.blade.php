@@ -22,4 +22,5 @@
     :mode="\App\Enums\CoachMode::Team"
     :team-id="$teamId"
     :conversation-id="$conversationId"
+    :pending-prompt="$pendingPrompt"
 />

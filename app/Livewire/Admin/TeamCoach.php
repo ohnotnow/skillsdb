@@ -9,6 +9,7 @@ use App\Models\AgentConversation;
 use App\Models\AgentConversationMessage;
 use App\Models\Team;
 use App\Services\SkillsCoach\CoachContext;
+use Laravel\Ai\Streaming\Events\TextDelta;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -24,6 +25,8 @@ class TeamCoach extends Component
     public ?string $conversationId = null;
 
     public ?int $teamId = null;
+
+    public ?string $pendingPrompt = null;
 
     // Required by HasCoachConversations trait
     protected string $exportPrefix = 'team-coach-chat-';
@@ -41,54 +44,77 @@ class TeamCoach extends Component
         }
     }
 
-    public function send(CoachContext $context): void
+    public function send(): void
     {
         $this->validate([
             'prompt' => ['required', 'string', 'max:1000'],
         ]);
 
-        $user = auth()->user();
-        $team = Team::find($this->teamId);
-
-        if (! $team) {
+        if (! $this->teamId) {
             return;
         }
 
-        // Set context for team mode
-        $context->setUser($user);
-        $context->setMode(CoachMode::Team);
-        $context->setTeam($team);
-
-        // Add user message to UI immediately
         $this->messages[] = [
             'role' => 'user',
             'content' => $this->prompt,
         ];
 
-        $this->dispatch('message-sent');
-
-        $prompt = $this->prompt;
+        $this->pendingPrompt = $this->prompt;
         $this->reset('prompt');
 
+        $this->dispatch('message-sent');
+
+        $this->js('$wire.streamResponse()');
+    }
+
+    public function streamResponse(CoachContext $context): void
+    {
+        if ($this->pendingPrompt === null) {
+            return;
+        }
+
+        $user = auth()->user();
+        $team = Team::find($this->teamId);
+
+        if (! $team) {
+            $this->pendingPrompt = null;
+
+            return;
+        }
+
+        $context->setUser($user);
+        $context->setMode(CoachMode::Team);
+        $context->setTeam($team);
+
+        $prompt = $this->pendingPrompt;
         $agent = TeamCoachAgent::make();
 
         $response = $this->conversationId
-            ? $agent->continue($this->conversationId, as: $user)->prompt($prompt)
-            : $agent->forUser($user)->prompt($prompt);
+            ? $agent->continue($this->conversationId, as: $user)->stream($prompt)
+            : $agent->forUser($user)->stream($prompt);
 
-        $this->conversationId = $response->conversationId;
+        $fullText = '';
+        foreach ($response as $event) {
+            if ($event instanceof TextDelta) {
+                $fullText .= $event->delta;
+                $this->stream(to: 'coach-response', content: $event->delta);
+            }
+        }
+
+        $conversationId = $agent->currentConversation();
+        $this->conversationId = $conversationId;
+        $this->pendingPrompt = null;
 
         // Store team_id in the user message's meta for filtering
-        AgentConversationMessage::where('conversation_id', $response->conversationId)
+        AgentConversationMessage::where('conversation_id', $conversationId)
             ->where('role', 'user')
             ->latest()
             ->first()
             ?->update(['meta' => ['team_id' => $this->teamId]]);
 
-        // Add assistant response to UI
         $this->messages[] = [
             'role' => 'assistant',
-            'content' => $response->text,
+            'content' => $fullText,
         ];
 
         $this->dispatch('message-received');
@@ -97,6 +123,7 @@ class TeamCoach extends Component
     public function clearChat(): void
     {
         $this->conversationId = null;
+        $this->pendingPrompt = null;
         $this->reset('messages');
     }
 

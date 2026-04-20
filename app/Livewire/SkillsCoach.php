@@ -6,6 +6,7 @@ use App\Ai\Agents\PersonalCoachAgent;
 use App\Livewire\Concerns\HasCoachConversations;
 use App\Models\AgentConversation;
 use App\Services\SkillsCoach\CoachContext;
+use Laravel\Ai\Streaming\Events\TextDelta;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -25,43 +26,62 @@ class SkillsCoach extends Component
 
     public ?string $conversationId = null;
 
+    public ?string $pendingPrompt = null;
+
     public function mount(): void
     {
         $this->loadConversation();
     }
 
-    public function send(CoachContext $context): void
+    public function send(): void
     {
         $this->validate([
             'prompt' => ['required', 'string', 'max:1000'],
         ]);
 
-        $user = auth()->user();
-        $context->setUser($user);
-
-        // Add user message to UI immediately
         $this->messages[] = [
             'role' => 'user',
             'content' => $this->prompt,
         ];
 
-        $this->dispatch('message-sent');
-
-        $prompt = $this->prompt;
+        $this->pendingPrompt = $this->prompt;
         $this->reset('prompt');
 
+        $this->dispatch('message-sent');
+
+        $this->js('$wire.streamResponse()');
+    }
+
+    public function streamResponse(CoachContext $context): void
+    {
+        if ($this->pendingPrompt === null) {
+            return;
+        }
+
+        $user = auth()->user();
+        $context->setUser($user);
+
+        $prompt = $this->pendingPrompt;
         $agent = PersonalCoachAgent::make();
 
         $response = $this->conversationId
-            ? $agent->continue($this->conversationId, as: $user)->prompt($prompt)
-            : $agent->forUser($user)->prompt($prompt);
+            ? $agent->continue($this->conversationId, as: $user)->stream($prompt)
+            : $agent->forUser($user)->stream($prompt);
 
-        $this->conversationId = $response->conversationId;
+        $fullText = '';
+        foreach ($response as $event) {
+            if ($event instanceof TextDelta) {
+                $fullText .= $event->delta;
+                $this->stream(to: 'coach-response', content: $event->delta);
+            }
+        }
 
-        // Add assistant response to UI
+        $this->conversationId = $agent->currentConversation();
+        $this->pendingPrompt = null;
+
         $this->messages[] = [
             'role' => 'assistant',
-            'content' => $response->text,
+            'content' => $fullText,
         ];
 
         $this->dispatch('message-received');
@@ -70,6 +90,7 @@ class SkillsCoach extends Component
     public function clearChat(): void
     {
         $this->conversationId = null;
+        $this->pendingPrompt = null;
         $this->reset('messages');
     }
 

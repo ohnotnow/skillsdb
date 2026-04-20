@@ -59,7 +59,7 @@ it('displays welcome message when no messages exist', function () {
         ->assertSee('skills to learn');
 });
 
-it('can send a message and receive a response', function () {
+it('can send a message and receive a streamed response', function () {
     $user = User::factory()->create();
 
     PersonalCoachAgent::fake([
@@ -71,11 +71,15 @@ it('can send a message and receive a response', function () {
         ->set('prompt', 'What skills should I learn?')
         ->call('send')
         ->assertSet('prompt', '')
+        ->assertSet('pendingPrompt', 'What skills should I learn?')
         ->assertSee('What skills should I learn?')
+        ->assertJs('$wire.streamResponse()')
+        ->call('streamResponse')
+        ->assertSet('pendingPrompt', null)
         ->assertSee('I recommend learning Docker next.');
 });
 
-it('persists messages to the database', function () {
+it('persists messages to the database after streaming completes', function () {
     $user = User::factory()->create();
 
     PersonalCoachAgent::fake([
@@ -85,7 +89,8 @@ it('persists messages to the database', function () {
     Livewire::actingAs($user)
         ->test(SkillsCoach::class)
         ->set('prompt', 'Tell me about Python')
-        ->call('send');
+        ->call('send')
+        ->call('streamResponse');
 
     expect(AgentConversation::where('user_id', $user->id)->count())->toBe(1);
     expect(AgentConversationMessage::count())->toBe(2); // User message + assistant response
@@ -135,12 +140,14 @@ it('can clear chat and start new conversation', function () {
         ->test(SkillsCoach::class)
         ->set('prompt', 'Test message')
         ->call('send')
+        ->call('streamResponse')
         ->assertSee('Test message');
 
     $originalConversationId = $component->get('conversationId');
 
     $component->call('clearChat')
         ->assertSet('messages', [])
+        ->assertSet('pendingPrompt', null)
         ->assertSee('your Skills Coach');
 
     // conversationId should be null after clearing

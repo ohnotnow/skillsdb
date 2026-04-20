@@ -45,6 +45,7 @@ it('stores team_id metadata correctly so conversations appear in history', funct
         ->test(TeamCoach::class)
         ->set('prompt', 'How many people on my team?')
         ->call('send')
+        ->call('streamResponse')
         ->assertSee('How many people on my team?')
         ->assertSee('Your team has 5 members.');
 
