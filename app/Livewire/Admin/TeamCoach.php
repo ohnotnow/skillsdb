@@ -9,6 +9,7 @@ use App\Models\AgentConversation;
 use App\Models\AgentConversationMessage;
 use App\Models\Team;
 use App\Services\SkillsCoach\CoachContext;
+use Illuminate\Support\Str;
 use Laravel\Ai\Streaming\Events\TextDelta;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -97,7 +98,11 @@ class TeamCoach extends Component
         foreach ($response as $event) {
             if ($event instanceof TextDelta) {
                 $fullText .= $event->delta;
-                $this->stream(to: 'coach-response', content: $event->delta);
+                $this->stream(
+                    to: 'coach-response',
+                    content: Str::markdown($fullText, ['html_input' => 'strip', 'allow_unsafe_links' => false]),
+                    replace: true,
+                );
             }
         }
 

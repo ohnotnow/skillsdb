@@ -146,7 +146,7 @@
                     <div class="shrink-0 w-7 h-7 mt-1.5 rounded-full {{ $avatarGradient }} flex items-center justify-center {{ $avatarShadowSmall }}">
                         <flux:icon :name="$icon" variant="micro" class="w-3.5 h-3.5 text-white" />
                     </div>
-                    <div class="{{ $bubbleBg }} rounded-2xl px-4 py-2.5 border {{ $bubbleBorder }} coach-markdown text-zinc-700 dark:text-zinc-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+                    <div class="{{ $bubbleBg }} rounded-2xl px-4 py-2.5 border {{ $bubbleBorder }} coach-markdown text-zinc-700 dark:text-zinc-300 text-sm sm:text-base leading-relaxed">
                         <span x-ref="stream" wire:stream="coach-response"></span>
                         <span x-show="empty" class="inline-flex items-center gap-1 italic opacity-70">
                             <span>Coach is thinking</span>
