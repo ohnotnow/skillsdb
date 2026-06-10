@@ -42,4 +42,5 @@ return [
         'base_url' => env('KEYCLOAK_BASE_URL'),
         'realms' => env('KEYCLOAK_REALM'),
     ],
+
 ];
