@@ -1,117 +1,70 @@
-name: tests
+name: laravel-ci
+
+# Supplementary quality + supply-chain gate for the GitHub mirror.
+# The real build/test/deploy pipeline lives in .gitlab-ci.yml (GitLab is primary).
+# This runs a fast PHP-only check: Pest, Pint and a Composer security audit.
 
 on:
   push:
-    branches: ["**"]
+    branches: [master, main]
   pull_request:
-    branches: [master]
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: laravel-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test-mysql:
-    name: Tests (MySQL 8.4)
+  test:
+    name: Pest, Pint & audit
     runs-on: ubuntu-latest
-
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: skillsdb_test
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping -h 127.0.0.1" --health-interval=10s --health-timeout=5s --health-retries=5
-
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          php-version: "8.4"
-          extensions: mbstring, pdo, pdo_mysql, xml, curl, zip, bcmath, gd
+          persist-credentials: false
+
+      - name: Set up PHP
+        # PHP version tracks .lando.yml (which matches production). Bump both together.
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: '8.4'
           coverage: none
 
-      - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '22'
+          cache: npm
 
-      - name: Prepare environment
+      - name: Authenticate Flux Pro
+        run: composer config --global --auth http-basic.composer.fluxui.dev "${{ secrets.FLUX_USERNAME }}" "${{ secrets.FLUX_LICENSE_KEY }}"
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Prepare application environment
         run: |
-          cp .env.ci .env
+          cp .env.example .env
           php artisan key:generate
 
-      - name: Install NPM dependencies and build assets
-        run: npm ci && npm run build
+      - name: Run tests (Pest)
+        run: php artisan test --parallel
 
-      - name: Run tests
-        env:
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: skillsdb_test
-          DB_USERNAME: root
-          DB_PASSWORD: password
-        run: php artisan test --compact --configuration=phpunit.ci.xml
-
-  test-pgsql:
-    name: Tests (PostgreSQL 17)
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: skillsdb_test
-        ports:
-          - 5432:5432
-        options: --health-cmd="pg_isready -U postgres" --health-interval=10s --health-timeout=5s --health-retries=5
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.4"
-          extensions: mbstring, pdo, pdo_pgsql, xml, curl, zip, bcmath, gd
-          coverage: none
-
-      - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist
-
-      - name: Prepare environment
-        run: |
-          cp .env.ci .env
-          php artisan key:generate
-
-      - name: Install NPM dependencies and build assets
-        run: npm ci && npm run build
-
-      - name: Run tests
-        env:
-          DB_CONNECTION: pgsql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-          DB_DATABASE: skillsdb_test
-          DB_USERNAME: postgres
-          DB_PASSWORD: password
-        run: php artisan test --compact --configuration=phpunit.ci.xml
-
-  lint:
-    name: Pint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.4"
-          coverage: none
-
-      - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist
-
-      - name: Run Pint
+      - name: Check code style (Pint)
+        if: ${{ !cancelled() }}
         run: vendor/bin/pint --test
+
+      - name: Security audit (Composer)
+        if: ${{ !cancelled() }}
+        run: composer audit
