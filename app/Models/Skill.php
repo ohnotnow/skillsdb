@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\SkillFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,20 +11,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+#[Fillable('name', 'description', 'skill_category_id', 'parent_id', 'approved_by', 'approved_at', 'is_reportable')]
 class Skill extends Model
 {
     /** @use HasFactory<SkillFactory> */
     use HasFactory;
-
-    protected $fillable = [
-        'name',
-        'description',
-        'skill_category_id',
-        'parent_id',
-        'approved_by',
-        'approved_at',
-        'is_reportable',
-    ];
 
     protected function casts(): array
     {

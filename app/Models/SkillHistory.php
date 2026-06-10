@@ -4,25 +4,18 @@ namespace App\Models;
 
 use App\Enums\SkillHistoryEvent;
 use Database\Factories\SkillHistoryFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\WithoutTimestamps;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+#[WithoutTimestamps]
+#[Fillable('user_id', 'skill_id', 'event_type', 'old_level', 'new_level', 'created_at')]
 class SkillHistory extends Model
 {
     /** @use HasFactory<SkillHistoryFactory> */
     use HasFactory;
-
-    public $timestamps = false;
-
-    protected $fillable = [
-        'user_id',
-        'skill_id',
-        'event_type',
-        'old_level',
-        'new_level',
-        'created_at',
-    ];
 
     protected function casts(): array
     {

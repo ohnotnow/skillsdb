@@ -6,6 +6,8 @@ use App\Enums\SkillHistoryEvent;
 use App\Enums\SkillLevel;
 use Carbon\Carbon;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -15,28 +17,12 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
 use Laravel\Sanctum\HasApiTokens;
 
+#[Fillable('username', 'forenames', 'surname', 'is_staff', 'is_admin', 'email', 'password', 'last_updated_skills_at', 'coach_contactable', 'bio')]
+#[Hidden('password', 'remember_token')]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
-
-    protected $fillable = [
-        'username',
-        'forenames',
-        'surname',
-        'is_staff',
-        'is_admin',
-        'email',
-        'password',
-        'last_updated_skills_at',
-        'coach_contactable',
-        'bio',
-    ];
-
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
 
     protected function casts(): array
     {
