@@ -5,15 +5,15 @@ namespace App\Console\Commands;
 use App\Mail\PendingSkillsDigest;
 use App\Models\Skill;
 use App\Models\User;
+use Illuminate\Console\Attributes\Description;
+use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 
+#[Signature('skills:send-pending-digest')]
+#[Description('Send a digest email to admins listing pending skills awaiting approval')]
 class SendPendingSkillsDigest extends Command
 {
-    protected $signature = 'skills:send-pending-digest';
-
-    protected $description = 'Send a digest email to admins listing pending skills awaiting approval';
-
     public function handle(): int
     {
         $pendingSkills = Skill::pending()->with('users')->get();

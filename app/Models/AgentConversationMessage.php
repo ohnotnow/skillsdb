@@ -2,17 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+#[Table(keyType: 'string', incrementing: false)]
+#[Fillable('id', 'conversation_id', 'user_id', 'agent', 'role', 'content', 'meta', 'attachments', 'tool_calls', 'tool_results', 'usage')]
 class AgentConversationMessage extends Model
 {
-    public $incrementing = false;
-
-    protected $keyType = 'string';
-
-    protected $fillable = ['id', 'conversation_id', 'user_id', 'agent', 'role', 'content', 'meta', 'attachments', 'tool_calls', 'tool_results', 'usage'];
-
     protected $attributes = [
         'meta' => '[]',
         'attachments' => '[]',

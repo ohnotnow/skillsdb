@@ -2,19 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+#[Table(keyType: 'string', incrementing: false)]
+#[Fillable('id', 'user_id', 'title')]
 class AgentConversation extends Model
 {
-    public $incrementing = false;
-
-    protected $keyType = 'string';
-
-    protected $fillable = ['id', 'user_id', 'title'];
-
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
