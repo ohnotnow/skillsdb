@@ -60,7 +60,7 @@ RUN composer install \
 ### Build JS/css assets
 # node:22 — pinned 2026-06-16 (aligns with .github/workflows/main.yml; Vite 7 needs Node >=22.12)
 # refresh: docker pull node:22 && docker images --digests | grep node
-FROM node:22@sha256:2d178f2785b96dfbf62a416ca2e40f50e30150b4ff3320d706f0d96e90600eb3 as frontend
+FROM node:26@sha256:f9a1756160a9e1c3dca456bc0b185bf8f2f112a6771c694df87288046f4306f1 as frontend
 
 # workaround for mix.version() webpack bug
 RUN ln -s /home/node/public /public
